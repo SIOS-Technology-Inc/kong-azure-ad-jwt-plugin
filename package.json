@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@microsoft/microsoft-graph-client": "^2.2.1",
-    "axios": "^0.21.1",
+    "axios": "^0.21.2",
     "isomorphic-fetch": "^3.0.0",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^2.0.4",
