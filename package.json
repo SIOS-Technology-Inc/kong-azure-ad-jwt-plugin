@@ -4,7 +4,9 @@
   "description": "",
   "scripts": {
     "lint": "eslint .",
-    "test": "eslint . && mocha --timeout 10000 test/**/*.spec.js"
+    "test": "eslint . && mocha --timeout 10000 test/**/*.spec.js",
+    "ut": "eslint . && mocha --timeout 10000 test/unit/**/*.spec.js",
+    "ft": "eslint . && mocha --timeout 10000 test/function/**/*.spec.js"
   },
   "author": "",
   "license": "ISC",
