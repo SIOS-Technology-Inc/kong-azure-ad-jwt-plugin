@@ -50,12 +50,12 @@ class KongMock {
   }
 }
 
-describe('Azure AD B2C OIDCプラグインのユニットテスト', () => {
-  describe('異常系テスト', () => {
-    before('tokenの獲得', async () => {
+describe('Unit test for Azure AD B2C OIDC Plugin', () => {
+  describe('Abnormal', () => {
+    before('getting token', async () => {
       process.env.SIGNED_KEY = 'testSecretKey'
     })
-    beforeEach('Graph APIのモック', () => {
+    beforeEach('creating Graph API mock', () => {
       nock('https://login.microsoftonline.com')
         .post(uri => uri.includes('/token'))
         .reply(201, {
@@ -71,7 +71,7 @@ describe('Azure AD B2C OIDCプラグインのユニットテスト', () => {
           }]
         })
     })
-    it('401: トークンが指定されていない場合エラーとなること', async () => {
+    it('throws a 401 error when no access token is provided', async () => {
       const mock = new KongMock({ Authorization: null })
       const plugin = new Plugin()
       mock.request.set_header('X-Anonymous-Consumer', 'true')
@@ -84,7 +84,7 @@ describe('Azure AD B2C OIDCプラグインのユニットテスト', () => {
         error: 'invalid_request'
       })
     })
-    it('401: トークンの有効期限が切れている場合エラーとなること', async () => {
+    it('throws a 401 error when the access token is expired', async () => {
       const jwtPayload = {
         tenantId: 'testTenantId',
         id: 'testId',
@@ -110,7 +110,7 @@ describe('Azure AD B2C OIDCプラグインのユニットテスト', () => {
         error: 'invalid_request'
       })
     })
-    it('401: トークンのaudクレームがupstreamのクライアントIDと異なる場合場合エラーとなること', async () => {
+    it('throws a 401 error when the aud claim does NOT equal "config.upstream_client_id"', async () => {
       const jwtPayload = {
         tenantId: 'testTenantId',
         id: 'testId',
@@ -140,7 +140,7 @@ describe('Azure AD B2C OIDCプラグインのユニットテスト', () => {
       expect(mock.warnCalls[1]).to.include('jwt audience invalid')
       expect(mock.warnCalls[2]).to.include('"JsonWebTokenError: jwt audience invalid.')
     })
-    it('401: トークンが不正な場合エラーとなること', async () => {
+    it('throws a 401 error when the access token is invalid', async () => {
       const mock = new KongMock({ Authorization: 'Bearer invalidToken' })
       const plugin = new Plugin({ upstream_client_id: 'upstream_client_id' })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
@@ -154,10 +154,10 @@ describe('Azure AD B2C OIDCプラグインのユニットテスト', () => {
       })
       expect(mock.warnCalls[0]).to.include('invalid JWT format')
     })
-    it('500: システムのエラーが出た場合に500が返ってくること', async () => {
+    it('throws a 500 error when system error is occurred', async () => {
       const mock = new KongMock()
       const plugin = new Plugin()
-      mock.request = null // ヘッダをGETする機能をnullにしたため500エラーとなる
+      mock.request = null // Make the request null and intentionally give an error
       await plugin.access(mock)
       expect(mock.response.exitCalls[0].responseCode).equal(500)
       expect(mock.response.exitCalls[0].responseBody).to.deep.contain({
@@ -169,10 +169,10 @@ describe('Azure AD B2C OIDCプラグインのユニットテスト', () => {
     })
   })
 
-  describe('正常系テスト', () => {
+  describe('Normal', () => {
     let authorizationCodeToken
     let credentialsToken
-    before('tokenの獲得', async () => {
+    before('getting token', async () => {
       const jwtPayloadForAuthorizationCode = {
         extension_tenantId: 'testTenantId',
         oid: 'testId',
@@ -195,7 +195,7 @@ describe('Azure AD B2C OIDCプラグインのユニットテスト', () => {
       credentialsToken = 'Bearer ' + jwt.sign(jwtPayloadForClientCredentials, jwtSecret, jwtOptions)
     })
 
-    beforeEach('Graph APIのモック', () => {
+    beforeEach('creating Graph API mock', () => {
       nock('https://login.microsoftonline.com')
         .post(uri => uri.includes('/token'))
         .reply(201, {
@@ -212,7 +212,7 @@ describe('Azure AD B2C OIDCプラグインのユニットテスト', () => {
         })
     })
 
-    it('認可コードフローで正しくヘッダが返ってくること', async () => {
+    it('returns right headers for the upstream server when using authorization code flows', async () => {
       const mock = new KongMock({ Authorization: authorizationCodeToken })
       const plugin = new Plugin({ upstream_client_id: 'upstream_client_id' })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
@@ -232,7 +232,7 @@ describe('Azure AD B2C OIDCプラグインのユニットテスト', () => {
         value: 'testRole'
       })
     })
-    it('クライアントクレデンシャルズフローで正しくヘッダが返ってくること', async () => {
+    it('returns right headers for the upstream server when using client credentials flows', async () => {
       const mock = new KongMock({ Authorization: credentialsToken })
       const plugin = new Plugin({ upstream_client_id: 'upstream_client_id' })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
@@ -244,7 +244,7 @@ describe('Azure AD B2C OIDCプラグインのユニットテスト', () => {
         value: 'testTenantId'
       })
     })
-    it('X-Anonymous-Consumerがfalseの場合に何も処理が行われないこと', async () => {
+    it('skips when "X-Anonymous-Consumer" from oauth2 plugin is false', async () => {
       const mock = new KongMock({ Authorization: credentialsToken })
       const plugin = new Plugin({ upstream_client_id: 'upstream_client_id' })
       mock.request.set_header('X-Anonymous-Consumer', 'false')

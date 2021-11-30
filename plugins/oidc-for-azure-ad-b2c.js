@@ -56,7 +56,7 @@ class OidcForAzureADB2CPlugin {
       return (await axios.post(`${this.graphApiLoginUrl}/${this.graphApiTenantId}/oauth2/v2.0/token`, params)).data.access_token
     }
 
-    // アクセストークンの期限が切れたら自動的に再取得します
+    // When the access token expires, it will be automatically reacquired.
     this.graphApiClient = mgclient.Client.initWithMiddleware({
       authProvider: {
         getAccessToken: getAccessTokenFunc

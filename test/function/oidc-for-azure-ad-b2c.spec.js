@@ -6,8 +6,8 @@ const sleep = require('sleep')
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
-describe('Azure AD B2C OIDCプラグインのプラグインの単体テスト', () => {
-  before('kongのセッティング', async () => {
+describe('Function test for Azure AD B2C OIDC Plugin', () => {
+  before('setting kong', async () => {
     const allRoutes = (await axios.get('http://localhost:8001/routes')).data.data
     await Promise.all(allRoutes.map(async route => {
       const allPlugins = (await axios.get(`http://localhost:8001/routes/${route.id}/plugins`)).data.data
@@ -57,10 +57,10 @@ describe('Azure AD B2C OIDCプラグインのプラグインの単体テスト',
       }
     })
 
-    await sleep.sleep(1) // kongの設定反映待ち
+    await sleep.sleep(1) // Wait for the kong settings to be reflected
   })
-  describe('異常系テスト', () => {
-    it('401: トークンが指定されていない場合エラーとなること', async () => {
+  describe('Abnormal', () => {
+    it('throws a 401 error when no access token is provided', async () => {
       const res = await axios.get('http://localhost:8000/get', {
         headers: { Host: 'httpbin.org' },
         validateStatus: (status) => status < 500
@@ -69,7 +69,7 @@ describe('Azure AD B2C OIDCプラグインのプラグインの単体テスト',
       expect(res.data.error_description).equal('The access token is missing')
       expect(res.data.error).equal('invalid_request')
     })
-    it('401: トークンの有効期限が切れている場合エラーとなること', async () => {
+    it('throws a 401 error when the access token is expired', async () => {
       const jwtPayload = {
         extension_tenantId: 'testTenantId',
         oid: 'testId',
@@ -90,7 +90,7 @@ describe('Azure AD B2C OIDCプラグインのプラグインの単体テスト',
       expect(res.data.error_description).equal('The access token is expired')
       expect(res.data.error).equal('invalid_request')
     })
-    it('401: トークンのaudクレームがupstreamのクライアントIDと異なる場合場合エラーとなること', async () => {
+    it('throws a 401 error when the aud claim does NOT equal "config.upstream_client_id"', async () => {
       const jwtPayload = {
         extension_tenantId: 'testTenantId',
         oid: 'testId',
@@ -112,7 +112,7 @@ describe('Azure AD B2C OIDCプラグインのプラグインの単体テスト',
       expect(res.data.error_description).equal('The access token is invalid')
       expect(res.data.error).equal('invalid_request')
     })
-    it('401: トークンが不正な場合エラーとなること', async () => {
+    it('throws a 401 error when the access token is invalid', async () => {
       const res = await axios.get('http://localhost:8000/get', {
         headers: { Host: 'httpbin.org', Authorization: 'Bearer invalidToken' },
         validateStatus: (status) => status < 500
@@ -122,11 +122,11 @@ describe('Azure AD B2C OIDCプラグインのプラグインの単体テスト',
       expect(res.data.error).equal('invalid_request')
     })
   })
-  describe('正常系テスト', () => {
-    describe('OAuth2プラグインでの認可失敗時のテスト', () => {
+  describe('Normal', () => {
+    describe('when an access token is NOT allowed at OAuth2 Plugin', () => {
       let authorizationCodeToken
       let credentialsToken
-      before('tokenの獲得', async () => {
+      before('getting token', async () => {
         const jwtPayloadForAuthorizationCode = {
           extension_tenantId: 'testTenantId',
           oid: 'testId',
@@ -147,7 +147,7 @@ describe('Azure AD B2C OIDCプラグインのプラグインの単体テスト',
 
         credentialsToken = 'Bearer ' + jwt.sign(jwtPayloadForClientCredentials, jwtSecret, jwtOptions)
       })
-      it('認可コードフローで正しくヘッダが返ってくること', async () => {
+      it('returns right headers for the upstream server when using authorization code flows', async () => {
         const res = await axios.get('http://localhost:8000/get', {
           headers: { Host: 'httpbin.org', Authorization: authorizationCodeToken }
         })
@@ -160,7 +160,7 @@ describe('Azure AD B2C OIDCプラグインのプラグインの単体テスト',
         expect(res.data.headers).not.have.property('X-Consumer-Username')
         expect(res.data.headers).not.have.property('Authorization')
       })
-      it('クライアントクレデンシャルズフローで正しくヘッダが返ってくること', async () => {
+      it('returns right headers for the upstream server when using client credentials flows', async () => {
         const res = await axios.get('http://localhost:8000/get', {
           headers: { Host: 'httpbin.org', Authorization: credentialsToken },
           validateStatus: (status) => status < 500
@@ -172,10 +172,10 @@ describe('Azure AD B2C OIDCプラグインのプラグインの単体テスト',
         expect(res.data.headers).not.have.property('Authorization')
       })
     })
-    describe('OAuth2プラグインでの認可成功時のテスト', () => {
+    describe('when an access token is allowed at OAuth2 Plugin', () => {
       let kongCredentialsToken
       let oauthPluginConsumerId
-      before('コンシューマの登録とtokenの獲得', async () => {
+      before('creating kong consumer and getting token', async () => {
         oauthPluginConsumerId = (await axios.post('http://localhost:8001/consumers', {
           username: 'testUsername'
         })).data.id
@@ -195,7 +195,7 @@ describe('Azure AD B2C OIDCプラグインのプラグインの単体テスト',
           headers: { Host: 'httpbin.org' }
         })).data.access_token
       })
-      it('正しくヘッダが返ってくること', async () => {
+      it('returns right headers for the upstream server', async () => {
         const res = await axios.get('http://localhost:8000/get', {
           headers: { Host: 'httpbin.org', Authorization: `Bearer ${kongCredentialsToken}` },
           validateStatus: (status) => status < 500
