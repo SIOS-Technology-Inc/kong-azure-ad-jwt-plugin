@@ -28,6 +28,12 @@ app.get('/v1.0/applications', (req, res) => {
   })
 })
 
+app.get('/v1.0/users/:id', (req, res) => {
+  res.status(200).send({
+    value: [{}]
+  })
+})
+
 app.listen(port, () => {
   console.log(`Start Graph API Stub Server on ${port}`)
 })

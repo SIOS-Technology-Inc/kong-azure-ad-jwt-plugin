@@ -112,15 +112,27 @@ class OidcForAzureADB2CPlugin {
         }
       }
 
-      if (decoded.extension_tenantId) {
-        await kong.service.request.setHeader('X-Bilink-Authenticated-Tenant-Id', decoded.extension_tenantId)
-        await kong.service.request.setHeader('X-Bilink-Authenticated-User-Id', decoded.oid)
-        await kong.service.request.setHeader('X-Bilink-Authenticated-User-Role', decoded.extension_role)
-      } else {
-        const app = (await this.graphApiClient
+      if (decoded.iss.includes('login.microsoftonline.com')) {
+        const client = (await this.graphApiClient
           .api(`/applications?$filter=appId eq '${decoded.azp}'`)
           .get()).value[0]
-        await kong.service.request.setHeader('X-Bilink-Authenticated-Tenant-Id', app.displayName)
+        const data = { client, token: decoded }
+        Object.keys(this.config.client_credentials.header_mapping).forEach(async key => {
+          const { from, value } = this.config.client_credentials.header_mapping[key]
+          if (key) { await kong.service.request.setHeader(key, data[from][value]) }
+        })
+      } else {
+        const user = (await this.graphApiClient
+          .api(`/users/${decoded.sub}`)
+          .get()).value[0]
+        const client = (await this.graphApiClient
+          .api(`/applications?$filter=appId eq '${decoded.azp}'`)
+          .get()).value[0]
+        const data = { user, client, token: decoded }
+        Object.keys(this.config.authorization_code.header_mapping).forEach(async key => {
+          const { from, value } = this.config.authorization_code.header_mapping[key]
+          if (key) { await kong.service.request.setHeader(key, data[from][value]) }
+        })
       }
     } catch (e) {
       kong.log.err(JSON.stringify(e))
@@ -143,7 +155,60 @@ class OidcForAzureADB2CPlugin {
 
 module.exports = {
   Plugin: OidcForAzureADB2CPlugin,
-  Schema: [{ upstream_client_id: { type: 'string', required: true } }],
+  Schema: [
+    { upstream_client_id: { type: 'string', required: true } },
+    { use_user_info: { type: 'boolean', required: false, default: false } },
+    { use_client_info: { type: 'boolean', required: false, default: false } },
+    {
+      authorization_code: {
+        type: 'record',
+        fields: [{
+          header_mapping: {
+            type: 'map',
+            required: false,
+            keys: { type: 'string' },
+            values: {
+              type: 'record',
+              fields: [
+                { from: { type: 'string', one_of: ['token', 'user', 'client'] } },
+                { value: { type: 'string' } }
+              ]
+            }
+          }
+        }],
+        default: {
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-User-Id': { from: 'token', value: 'sup' }
+          }
+        }
+      }
+    },
+    {
+      client_credentials: {
+        type: 'record',
+        fields: [{
+          header_mapping: {
+            type: 'map',
+            required: false,
+            keys: { type: 'string' },
+            values: {
+              type: 'record',
+              fields: [
+                { from: { type: 'string', one_of: ['token', 'client'] } },
+                { value: { type: 'string' } }
+              ]
+            }
+          }
+        }],
+        default: {
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' }
+          }
+        }
+      }
+    }
+  ],
   Version: '0.1.0',
-  Priority: 0
+  Priority: 999
 }

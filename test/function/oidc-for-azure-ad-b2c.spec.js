@@ -45,7 +45,17 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
     await axios.post('http://localhost:8001/routes/httpbin-route/plugins', {
       name: 'oidc-for-azure-ad-b2c',
       config: {
-        upstream_client_id: 'upstream_client_id'
+        upstream_client_id: 'upstream_client_id',
+        authorization_code: {
+          header_mapping: {
+            'X-Bilink-Authenticated-Tenant-Id': { from: 'token', value: 'extension_tenantId' },
+            'X-Bilink-Authenticated-User-Id': { from: 'token', value: 'oid' },
+            'X-Bilink-Authenticated-User-Role': { from: 'token', value: 'extension_role' }
+          }
+        },
+        client_credentials: {
+          header_mapping: { 'X-Bilink-Authenticated-Tenant-Id': { from: 'client', value: 'displayName' } }
+        }
       }
     })
     const anonymousConsumerId = (await axios.post('http://localhost:8001/consumers', {
@@ -128,12 +138,14 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
       let credentialsToken
       before('getting token', async () => {
         const jwtPayloadForAuthorizationCode = {
+          iss: 'https://test.b2clogin.com/',
           extension_tenantId: 'testTenantId',
           oid: 'testId',
           extension_role: 'testRole',
           aud: 'upstream_client_id'
         }
         const jwtPayloadForClientCredentials = {
+          iss: 'https://login.microsoftonline.com/',
           azp: 'tenant_client_id',
           aud: 'upstream_client_id'
         }
