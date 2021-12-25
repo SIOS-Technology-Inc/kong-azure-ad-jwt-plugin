@@ -179,7 +179,7 @@ module.exports = {
         default: {
           header_mapping: {
             'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-            'X-Authenticated-User-Id': { from: 'token', value: 'sup' }
+            'X-Authenticated-User-Id': { from: 'token', value: 'sub' }
           }
         }
       }
