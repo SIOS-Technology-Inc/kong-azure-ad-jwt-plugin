@@ -67,7 +67,7 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         .get(uri => uri.includes('/v1.0/applications'))
         .reply(200, {
           value: [{
-            displayName: 'testTenantId'
+            displayName: 'clientName'
           }]
         })
     })
@@ -86,7 +86,7 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
     })
     it('throws a 401 error when the access token is expired', async () => {
       const jwtPayload = {
-        tenantId: 'testTenantId',
+        iss: 'https://test.b2clogin.com',
         id: 'testId',
         role: 'testRole'
       }
@@ -99,7 +99,9 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
       const expiredToken = 'Bearer ' + jwt.sign(jwtPayload, jwtSecret, jwtOptions)
 
       const mock = new KongMock({ Authorization: expiredToken })
-      const plugin = new Plugin({ upstream_client_id: 'upstream_client_id' })
+      const plugin = new Plugin({
+        upstream_client_id: 'upstream_client_id'
+      })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
@@ -112,7 +114,6 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
     })
     it('throws a 401 error when the aud claim does NOT equal "config.upstream_client_id"', async () => {
       const jwtPayload = {
-        tenantId: 'testTenantId',
         id: 'testId',
         role: 'testRole',
         aud: 'invalid'
@@ -126,7 +127,9 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
       const invalidAudToken = 'Bearer ' + jwt.sign(jwtPayload, jwtSecret, jwtOptions)
 
       const mock = new KongMock({ Authorization: invalidAudToken })
-      const plugin = new Plugin({ upstream_client_id: 'client_id' })
+      const plugin = new Plugin({
+        upstream_client_id: 'client_id'
+      })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
@@ -142,7 +145,9 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
     })
     it('throws a 401 error when the access token is invalid', async () => {
       const mock = new KongMock({ Authorization: 'Bearer invalidToken' })
-      const plugin = new Plugin({ upstream_client_id: 'upstream_client_id' })
+      const plugin = new Plugin({
+        upstream_client_id: 'upstream_client_id'
+      })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
@@ -174,14 +179,15 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
     let credentialsToken
     before('getting token', async () => {
       const jwtPayloadForAuthorizationCode = {
-        extension_tenantId: 'testTenantId',
-        oid: 'testId',
-        extension_role: 'testRole',
-        aud: 'upstream_client_id'
+        iss: 'https://test.b2clogin.com/',
+        sub: 'userId',
+        aud: 'upstream_client_id',
+        azp: 'clientId'
       }
       const jwtPayloadForClientCredentials = {
+        iss: 'https://login.microsoftonline.com/',
         aud: 'upstream_client_id',
-        azp: 'tenant_client_id'
+        azp: 'clientId'
       }
       const jwtSecret = 'testSecretKey'
       process.env.SIGNED_KEY = 'testSecretKey'
@@ -203,50 +209,119 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
           expires_in: 3599,
           access_token: 'token'
         })
+        .post(uri => uri.includes('/token'))
+        .reply(201, {
+          token_type: 'Bearer',
+          expires_in: 3599,
+          access_token: 'token'
+        })
+      nock('https://graph.microsoft.com')
+        .get(uri => uri.includes('/v1.0/users'))
+        .reply(200, {
+          value: [{
+            displayName: 'userName'
+          }]
+        })
       nock('https://graph.microsoft.com')
         .get(uri => uri.includes('/v1.0/applications'))
         .reply(200, {
           value: [{
-            displayName: 'testTenantId'
+            displayName: 'clientName'
           }]
         })
     })
 
     it('returns right headers for the upstream server when using authorization code flows', async () => {
       const mock = new KongMock({ Authorization: authorizationCodeToken })
-      const plugin = new Plugin({ upstream_client_id: 'upstream_client_id' })
+      const plugin = new Plugin({
+        upstream_client_id: 'upstream_client_id',
+        authorization_code: {
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+            'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+            'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
+          }
+        },
+        client_credentials: {
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+          }
+        }
+      })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
       await plugin.access(mock)
       expect(mock.service.request.setHeaderCalls[0]).to.deep.equal({
-        name: 'X-Bilink-Authenticated-Tenant-Id',
-        value: 'testTenantId'
+        name: 'X-Authenticated-Client-Id',
+        value: 'clientId'
       })
       expect(mock.service.request.setHeaderCalls[1]).to.deep.equal({
-        name: 'X-Bilink-Authenticated-User-Id',
-        value: 'testId'
+        name: 'X-Authenticated-Client-Name',
+        value: 'clientName'
       })
       expect(mock.service.request.setHeaderCalls[2]).to.deep.equal({
-        name: 'X-Bilink-Authenticated-User-Role',
-        value: 'testRole'
+        name: 'X-Authenticated-User-Id',
+        value: 'userId'
+      })
+      expect(mock.service.request.setHeaderCalls[3]).to.deep.equal({
+        name: 'X-Authenticated-User-Name',
+        value: 'userName'
       })
     })
     it('returns right headers for the upstream server when using client credentials flows', async () => {
       const mock = new KongMock({ Authorization: credentialsToken })
-      const plugin = new Plugin({ upstream_client_id: 'upstream_client_id' })
+      const plugin = new Plugin({
+        upstream_client_id: 'upstream_client_id',
+        authorization_code: {
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+            'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+            'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
+          }
+        },
+        client_credentials: {
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+          }
+        }
+      })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
       await plugin.access(mock)
       expect(mock.service.request.setHeaderCalls[0]).to.deep.equal({
-        name: 'X-Bilink-Authenticated-Tenant-Id',
-        value: 'testTenantId'
+        name: 'X-Authenticated-Client-Id',
+        value: 'clientId'
+      })
+      expect(mock.service.request.setHeaderCalls[1]).to.deep.equal({
+        name: 'X-Authenticated-Client-Name',
+        value: 'clientName'
       })
     })
     it('skips when "X-Anonymous-Consumer" from oauth2 plugin is false', async () => {
       const mock = new KongMock({ Authorization: credentialsToken })
-      const plugin = new Plugin({ upstream_client_id: 'upstream_client_id' })
+      const plugin = new Plugin({
+        upstream_client_id: 'upstream_client_id',
+        authorization_code: {
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+            'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+            'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
+          }
+        },
+        client_credentials: {
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+          }
+        }
+      })
       mock.request.set_header('X-Anonymous-Consumer', 'false')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'not_anonymous_users')
@@ -259,7 +334,8 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         name: 'X-Consumer-Username',
         value: 'not_anonymous_users'
       })
-      mock.service.request.setHeaderCalls.map(header => expect(header).to.not.have.property('name', 'X-Bilink-Authenticated-Tenant-Id'))
+      mock.service.request.setHeaderCalls.map(header => expect(header).to.not.have.property('name', 'X-Authenticated-Client-Id'))
+      mock.service.request.setHeaderCalls.map(header => expect(header).to.not.have.property('name', 'X-Authenticated-Client-Name'))
     })
   })
 })

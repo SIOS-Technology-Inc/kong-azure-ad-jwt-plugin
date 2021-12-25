@@ -23,7 +23,15 @@ app.post(/.*\/token/, (req, res) => {
 app.get('/v1.0/applications', (req, res) => {
   res.status(200).send({
     value: [{
-      displayName: 'testTenantId'
+      displayName: 'clientName'
+    }]
+  })
+})
+
+app.get('/v1.0/users/:id', (req, res) => {
+  res.status(200).send({
+    value: [{
+      displayName: 'userName'
     }]
   })
 })

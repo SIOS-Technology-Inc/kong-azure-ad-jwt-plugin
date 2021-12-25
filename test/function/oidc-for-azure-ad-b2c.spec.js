@@ -45,7 +45,21 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
     await axios.post('http://localhost:8001/routes/httpbin-route/plugins', {
       name: 'oidc-for-azure-ad-b2c',
       config: {
-        upstream_client_id: 'upstream_client_id'
+        upstream_client_id: 'upstream_client_id',
+        authorization_code: {
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+            'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+            'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
+          }
+        },
+        client_credentials: {
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+          }
+        }
       }
     })
     const anonymousConsumerId = (await axios.post('http://localhost:8001/consumers', {
@@ -71,9 +85,10 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
     })
     it('throws a 401 error when the access token is expired', async () => {
       const jwtPayload = {
-        extension_tenantId: 'testTenantId',
-        oid: 'testId',
-        extension_role: 'testRole'
+        iss: 'https://test.b2clogin.com/',
+        sub: 'userId',
+        aud: 'upstream_client_id',
+        azp: 'clientId'
       }
       const jwtSecret = 'testSecretKey'
       const jwtOptions = {
@@ -92,9 +107,9 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
     })
     it('throws a 401 error when the aud claim does NOT equal "config.upstream_client_id"', async () => {
       const jwtPayload = {
-        extension_tenantId: 'testTenantId',
-        oid: 'testId',
-        extension_role: 'testRole',
+        iss: 'https://test.b2clogin.com/',
+        sub: 'userId',
+        azp: 'clientId',
         aud: 'invalid'
       }
       const jwtSecret = 'testSecretKey'
@@ -128,14 +143,15 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
       let credentialsToken
       before('getting token', async () => {
         const jwtPayloadForAuthorizationCode = {
-          extension_tenantId: 'testTenantId',
-          oid: 'testId',
-          extension_role: 'testRole',
-          aud: 'upstream_client_id'
+          iss: 'https://test.b2clogin.com/',
+          sub: 'userId',
+          aud: 'upstream_client_id',
+          azp: 'clientId'
         }
         const jwtPayloadForClientCredentials = {
-          azp: 'tenant_client_id',
-          aud: 'upstream_client_id'
+          iss: 'https://login.microsoftonline.com/',
+          aud: 'upstream_client_id',
+          azp: 'clientId'
         }
         const jwtSecret = 'testSecretKey'
         const jwtOptions = {
@@ -153,9 +169,10 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
         })
 
         expect(res.status).equal(200)
-        expect(res.data.headers).have.property('X-Bilink-Authenticated-Tenant-Id', 'testTenantId')
-        expect(res.data.headers).have.property('X-Bilink-Authenticated-User-Id', 'testId')
-        expect(res.data.headers).have.property('X-Bilink-Authenticated-User-Role', 'testRole')
+        expect(res.data.headers).to.have.property('X-Authenticated-Client-Id', 'clientId')
+        expect(res.data.headers).to.have.property('X-Authenticated-Client-Name', 'clientName')
+        expect(res.data.headers).to.have.property('X-Authenticated-User-Id', 'userId')
+        expect(res.data.headers).to.have.property('X-Authenticated-User-Name', 'userName')
         expect(res.data.headers).not.have.property('X-Consumer-Id')
         expect(res.data.headers).not.have.property('X-Consumer-Username')
         expect(res.data.headers).not.have.property('Authorization')
@@ -166,7 +183,8 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
           validateStatus: (status) => status < 500
         })
         expect(res.status).equal(200)
-        expect(res.data.headers).have.property('X-Bilink-Authenticated-Tenant-Id', 'testTenantId')
+        expect(res.data.headers).to.have.property('X-Authenticated-Client-Id', 'clientId')
+        expect(res.data.headers).to.have.property('X-Authenticated-Client-Name', 'clientName')
         expect(res.data.headers).not.have.property('X-Consumer-Id')
         expect(res.data.headers).not.have.property('X-Consumer-Username')
         expect(res.data.headers).not.have.property('Authorization')
@@ -203,7 +221,8 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
         expect(res.status).equal(200)
         expect(res.data.headers).have.property('X-Consumer-Id', oauthPluginConsumerId)
         expect(res.data.headers).have.property('X-Consumer-Username', 'testUsername')
-        expect(res.data.headers).not.have.property('X-Bilink-Authenticated-Tenant-Id')
+        expect(res.data.headers).not.to.have.property('X-Authenticated-Client-Id')
+        expect(res.data.headers).not.to.have.property('X-Authenticated-Client-Name')
         expect(res.data.headers).not.have.property('Authorization')
       })
     })
