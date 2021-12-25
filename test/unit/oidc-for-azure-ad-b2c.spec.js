@@ -67,7 +67,7 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         .get(uri => uri.includes('/v1.0/applications'))
         .reply(200, {
           value: [{
-            displayName: 'testTenantId'
+            displayName: 'clientName'
           }]
         })
     })
@@ -87,7 +87,6 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
     it('throws a 401 error when the access token is expired', async () => {
       const jwtPayload = {
         iss: 'https://test.b2clogin.com',
-        tenantId: 'testTenantId',
         id: 'testId',
         role: 'testRole'
       }
@@ -115,7 +114,6 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
     })
     it('throws a 401 error when the aud claim does NOT equal "config.upstream_client_id"', async () => {
       const jwtPayload = {
-        tenantId: 'testTenantId',
         id: 'testId',
         role: 'testRole',
         aud: 'invalid'
@@ -182,15 +180,14 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
     before('getting token', async () => {
       const jwtPayloadForAuthorizationCode = {
         iss: 'https://test.b2clogin.com/',
-        extension_tenantId: 'testTenantId',
-        oid: 'testId',
-        extension_role: 'testRole',
-        aud: 'upstream_client_id'
+        sub: 'userId',
+        aud: 'upstream_client_id',
+        azp: 'clientId'
       }
       const jwtPayloadForClientCredentials = {
         iss: 'https://login.microsoftonline.com/',
         aud: 'upstream_client_id',
-        azp: 'tenant_client_id'
+        azp: 'clientId'
       }
       const jwtSecret = 'testSecretKey'
       process.env.SIGNED_KEY = 'testSecretKey'
@@ -221,13 +218,15 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
       nock('https://graph.microsoft.com')
         .get(uri => uri.includes('/v1.0/users'))
         .reply(200, {
-          value: [{}]
+          value: [{
+            displayName: 'userName'
+          }]
         })
       nock('https://graph.microsoft.com')
         .get(uri => uri.includes('/v1.0/applications'))
         .reply(200, {
           value: [{
-            displayName: 'testTenantId'
+            displayName: 'clientName'
           }]
         })
     })
@@ -238,13 +237,17 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         upstream_client_id: 'upstream_client_id',
         authorization_code: {
           header_mapping: {
-            'X-Bilink-Authenticated-Tenant-Id': { from: 'token', value: 'extension_tenantId' },
-            'X-Bilink-Authenticated-User-Id': { from: 'token', value: 'oid' },
-            'X-Bilink-Authenticated-User-Role': { from: 'token', value: 'extension_role' }
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+            'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+            'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
           }
         },
         client_credentials: {
-          header_mapping: { 'X-Bilink-Authenticated-Tenant-Id': { from: 'client', value: 'displayName' } }
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+          }
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
@@ -252,16 +255,20 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
       await plugin.access(mock)
       expect(mock.service.request.setHeaderCalls[0]).to.deep.equal({
-        name: 'X-Bilink-Authenticated-Tenant-Id',
-        value: 'testTenantId'
+        name: 'X-Authenticated-Client-Id',
+        value: 'clientId'
       })
       expect(mock.service.request.setHeaderCalls[1]).to.deep.equal({
-        name: 'X-Bilink-Authenticated-User-Id',
-        value: 'testId'
+        name: 'X-Authenticated-Client-Name',
+        value: 'clientName'
       })
       expect(mock.service.request.setHeaderCalls[2]).to.deep.equal({
-        name: 'X-Bilink-Authenticated-User-Role',
-        value: 'testRole'
+        name: 'X-Authenticated-User-Id',
+        value: 'userId'
+      })
+      expect(mock.service.request.setHeaderCalls[3]).to.deep.equal({
+        name: 'X-Authenticated-User-Name',
+        value: 'userName'
       })
     })
     it('returns right headers for the upstream server when using client credentials flows', async () => {
@@ -270,13 +277,17 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         upstream_client_id: 'upstream_client_id',
         authorization_code: {
           header_mapping: {
-            'X-Bilink-Authenticated-Tenant-Id': { from: 'token', value: 'extension_tenantId' },
-            'X-Bilink-Authenticated-User-Id': { from: 'token', value: 'oid' },
-            'X-Bilink-Authenticated-User-Role': { from: 'token', value: 'extension_role' }
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+            'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+            'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
           }
         },
         client_credentials: {
-          header_mapping: { 'X-Bilink-Authenticated-Tenant-Id': { from: 'client', value: 'displayName' } }
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+          }
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
@@ -284,8 +295,12 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
       await plugin.access(mock)
       expect(mock.service.request.setHeaderCalls[0]).to.deep.equal({
-        name: 'X-Bilink-Authenticated-Tenant-Id',
-        value: 'testTenantId'
+        name: 'X-Authenticated-Client-Id',
+        value: 'clientId'
+      })
+      expect(mock.service.request.setHeaderCalls[1]).to.deep.equal({
+        name: 'X-Authenticated-Client-Name',
+        value: 'clientName'
       })
     })
     it('skips when "X-Anonymous-Consumer" from oauth2 plugin is false', async () => {
@@ -294,13 +309,17 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         upstream_client_id: 'upstream_client_id',
         authorization_code: {
           header_mapping: {
-            'X-Bilink-Authenticated-Tenant-Id': { from: 'token', value: 'extension_tenantId' },
-            'X-Bilink-Authenticated-User-Id': { from: 'token', value: 'oid' },
-            'X-Bilink-Authenticated-User-Role': { from: 'token', value: 'extension_role' }
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+            'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+            'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
           }
         },
         client_credentials: {
-          header_mapping: { 'X-Bilink-Authenticated-Tenant-Id': { from: 'client', value: 'displayName' } }
+          header_mapping: {
+            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+          }
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'false')
@@ -315,7 +334,8 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         name: 'X-Consumer-Username',
         value: 'not_anonymous_users'
       })
-      mock.service.request.setHeaderCalls.map(header => expect(header).to.not.have.property('name', 'X-Bilink-Authenticated-Tenant-Id'))
+      mock.service.request.setHeaderCalls.map(header => expect(header).to.not.have.property('name', 'X-Authenticated-Client-Id'))
+      mock.service.request.setHeaderCalls.map(header => expect(header).to.not.have.property('name', 'X-Authenticated-Client-Name'))
     })
   })
 })
