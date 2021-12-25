@@ -118,8 +118,9 @@ class OidcForAzureADB2CPlugin {
           .get()).value[0]
         const data = { client, token: decoded }
         Object.keys(this.config.client_credentials.header_mapping).forEach(async key => {
-          const { from, value } = this.config.client_credentials.header_mapping[key]
-          if (key) { await kong.service.request.setHeader(key, data[from][value]) }
+          const { from, value, encode } = this.config.client_credentials.header_mapping[key]
+          const headerValue = encode === 'url_encode' ? encodeURIComponent(data[from][value]) : data[from][value]
+          if (key) { await kong.service.request.setHeader(key, headerValue) }
         })
       } else {
         const user = (await this.graphApiClient
@@ -130,8 +131,9 @@ class OidcForAzureADB2CPlugin {
           .get()).value[0]
         const data = { user, client, token: decoded }
         Object.keys(this.config.authorization_code.header_mapping).forEach(async key => {
-          const { from, value } = this.config.authorization_code.header_mapping[key]
-          if (key) { await kong.service.request.setHeader(key, data[from][value]) }
+          const { from, value, encode } = this.config.authorization_code.header_mapping[key]
+          const headerValue = encode === 'url_encode' ? encodeURIComponent(data[from][value]) : data[from][value]
+          if (key) { await kong.service.request.setHeader(key, headerValue) }
         })
       }
     } catch (e) {
@@ -169,7 +171,8 @@ module.exports = {
               type: 'record',
               fields: [
                 { from: { type: 'string', one_of: ['token', 'user', 'client'] } },
-                { value: { type: 'string' } }
+                { value: { type: 'string' } },
+                { encode: { type: 'string', one_of: ['none', 'url_encode'], default: 'none' } }
               ]
             }
           }
@@ -194,7 +197,8 @@ module.exports = {
               type: 'record',
               fields: [
                 { from: { type: 'string', one_of: ['token', 'client'] } },
-                { value: { type: 'string' } }
+                { value: { type: 'string' } },
+                { encode: { type: 'string', one_of: ['none', 'url_encode'], default: 'none' } }
               ]
             }
           }
