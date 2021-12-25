@@ -157,8 +157,6 @@ module.exports = {
   Plugin: OidcForAzureADB2CPlugin,
   Schema: [
     { upstream_client_id: { type: 'string', required: true } },
-    { use_user_info: { type: 'boolean', required: false, default: false } },
-    { use_client_info: { type: 'boolean', required: false, default: false } },
     {
       authorization_code: {
         type: 'record',
