@@ -82,6 +82,7 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
+      mock.request.set_header('X-Consumer-Id', 'anonymous')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
       await plugin.access(mock)
@@ -116,6 +117,7 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
+      mock.request.set_header('X-Consumer-Id', 'anonymous')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
       await plugin.access(mock)
@@ -150,6 +152,7 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
+      mock.request.set_header('X-Consumer-Id', 'anonymous')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
       await plugin.access(mock)
@@ -174,6 +177,7 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
+      mock.request.set_header('X-Consumer-Id', 'anonymous')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
       await plugin.access(mock)
@@ -283,6 +287,7 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
+      mock.request.set_header('X-Consumer-Id', 'anonymous')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
       await plugin.access(mock)
@@ -323,6 +328,7 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
+      mock.request.set_header('X-Consumer-Id', 'anonymous')
       mock.service.request.setHeader('X-Consumer-Id', 'testId')
       mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
       await plugin.access(mock)
