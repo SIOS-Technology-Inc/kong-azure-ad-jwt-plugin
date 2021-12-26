@@ -46,7 +46,11 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
       name: 'oidc-for-azure-ad-b2c',
       config: {
         upstream_client_id: 'upstream_client_id',
+        kong_client_id: 'client_id',
+        kong_client_secret: 'client_secret',
+        azure_tenant: 'test.example.com',
         authorization_code: {
+          jwks_url: 'http://example.com',
           header_mapping: {
             'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
             'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
@@ -55,6 +59,7 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
           }
         },
         client_credentials: {
+          jwks_url: 'http://example.com',
           header_mapping: {
             'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
             'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
