@@ -25,21 +25,16 @@ const getSigningKey = (client, kid) => {
 class OidcForAzureADB2CPlugin {
   constructor (config) {
     this.config = config
-    this.graphApiClientID = process.env.CLIENT_ID_FOR_MS_GRAPH_API
-    this.graphApiClientSecret = process.env.CLIENT_SECRET_FOR_MS_GRAPH_API
-    this.graphApiTenantId = process.env.TENANT_ID_FOR_MS_GRAPH_API
-    const authorizationCodeJwksUrl = process.env.AUTHORIZATION_CODE_JWKS_URL
-    const clientCredentialsJwksUrl = process.env.CLIENT_CREDENTIALS_JWKS_URL
     this.graphApiBaseUrl = process.env.GRAPH_API_URL || 'https://graph.microsoft.com'
     this.graphApiLoginUrl = process.env.GRAPH_API_LOGIN_URL || 'https://login.microsoftonline.com'
     this.authorizationCodeJwksClient = jwksClient({
-      jwksUri: authorizationCodeJwksUrl,
+      jwksUri: config.authorization_code.jwks_url,
       cache: true,
       cacheMaxEntries: 5,
       cacheMaxAge: 600000 // 10min
     })
     this.clientCredentialsJwksClient = jwksClient({
-      jwksUri: clientCredentialsJwksUrl,
+      jwksUri: config.client_credentials.jwks_url,
       cache: true,
       cacheMaxEntries: 5,
       cacheMaxAge: 600000 // 10min
@@ -49,11 +44,11 @@ class OidcForAzureADB2CPlugin {
   async buildGraghapiClient () {
     const getAccessTokenFunc = async () => {
       const params = new URLSearchParams()
-      params.append('client_id', this.graphApiClientID)
-      params.append('client_secret', this.graphApiClientSecret)
+      params.append('client_id', this.config.kong_client_id)
+      params.append('client_secret', this.config.kong_client_secret)
       params.append('scope', 'https://graph.microsoft.com/.default')
       params.append('grant_type', 'client_credentials')
-      return (await axios.post(`${this.graphApiLoginUrl}/${this.graphApiTenantId}/oauth2/v2.0/token`, params)).data.access_token
+      return (await axios.post(`${this.graphApiLoginUrl}/${this.config.azure_tenant}/oauth2/v2.0/token`, params)).data.access_token
     }
 
     // When the access token expires, it will be automatically reacquired.
@@ -159,50 +154,58 @@ module.exports = {
   Plugin: OidcForAzureADB2CPlugin,
   Schema: [
     { upstream_client_id: { type: 'string', required: true } },
+    { kong_client_id: { type: 'string', required: true } },
+    { kong_client_secret: { type: 'string', required: true } },
+    { azure_tenant: { type: 'string', required: true } },
     {
       authorization_code: {
         type: 'record',
-        fields: [{
-          header_mapping: {
-            type: 'map',
-            required: false,
-            keys: { type: 'string' },
-            values: {
-              type: 'record',
-              fields: [
-                { from: { type: 'string', one_of: ['token', 'user', 'client'] } },
-                { value: { type: 'string' } },
-                { encode: { type: 'string', one_of: ['none', 'url_encode'], default: 'none' } }
-              ]
+        required: true,
+        fields: [
+          { jwks_url: { type: 'string', required: true } },
+          {
+            header_mapping: {
+              type: 'map',
+              required: false,
+              keys: { type: 'string' },
+              values: {
+                type: 'record',
+                fields: [
+                  { from: { type: 'string', one_of: ['token', 'user', 'client'] } },
+                  { value: { type: 'string' } },
+                  { encode: { type: 'string', one_of: ['none', 'url_encode'], default: 'none' } }
+                ]
+              },
+              default: {
+                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+                'X-Authenticated-User-Id': { from: 'token', value: 'sub' }
+              }
             }
           }
-        }],
-        default: {
-          header_mapping: {
-            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-            'X-Authenticated-User-Id': { from: 'token', value: 'sub' }
-          }
-        }
+        ]
       }
     },
     {
       client_credentials: {
         type: 'record',
-        fields: [{
-          header_mapping: {
-            type: 'map',
-            required: false,
-            keys: { type: 'string' },
-            values: {
-              type: 'record',
-              fields: [
-                { from: { type: 'string', one_of: ['token', 'client'] } },
-                { value: { type: 'string' } },
-                { encode: { type: 'string', one_of: ['none', 'url_encode'], default: 'none' } }
-              ]
+        fields: [
+          { jwks_url: { type: 'string', default: 'https://login.microsoftonline.com/common/discovery/keys' } },
+          {
+            header_mapping: {
+              type: 'map',
+              required: false,
+              keys: { type: 'string' },
+              values: {
+                type: 'record',
+                fields: [
+                  { from: { type: 'string', one_of: ['token', 'client'] } },
+                  { value: { type: 'string' } },
+                  { encode: { type: 'string', one_of: ['none', 'url_encode'], default: 'none' } }
+                ]
+              }
             }
           }
-        }],
+        ],
         default: {
           header_mapping: {
             'X-Authenticated-Client-Id': { from: 'token', value: 'azp' }

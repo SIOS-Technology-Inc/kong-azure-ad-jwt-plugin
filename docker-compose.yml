@@ -21,15 +21,11 @@ services:
       KONG_ADMIN_ERROR_LOG: /dev/stderr
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
-      # Kong Client ID/Secret for Microsoft Graph API
-      CLIENT_ID_FOR_MS_GRAPH_API: 'client_id'
-      CLIENT_SECRET_FOR_MS_GRAPH_API: 'client_secret'
-      TENANT_ID_FOR_MS_GRAPH_API: 'test.example.com'
-      AUTHORIZATION_CODE_JWKS_URL: 'https://example.com/jwks'
-      CLIENT_CREDENTIALS_JWKS_URL: 'https://example.com/jwks'
+      # Test Env
       SIGNED_KEY: 'testSecretKey'
       GRAPH_API_URL: 'http://graph-api-stub:8080'
       GRAPH_API_LOGIN_URL: 'http://graph-api-stub:8080'
+      KONG_NGINX_MAIN_ENV: 'SIGNED_KEY; env GRAPH_API_URL; env GRAPH_API_LOGIN_URL'
     networks:
       - kong-net
     ports:
