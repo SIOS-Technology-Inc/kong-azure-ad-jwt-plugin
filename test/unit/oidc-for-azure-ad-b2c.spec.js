@@ -345,6 +345,7 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
       const mock = new KongMock({ Authorization: credentialsToken })
       const plugin = new Plugin({
         upstream_client_id: 'upstream_client_id',
+        use_kong_auth: true,
         authorization_code: {
           header_mapping: {
             'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },

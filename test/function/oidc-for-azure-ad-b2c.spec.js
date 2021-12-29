@@ -539,6 +539,7 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
             kong_client_id: 'client_id',
             kong_client_secret: 'client_secret',
             azure_tenant: 'test.example.com',
+            use_kong_auth: true,
             authorization_code: {
               jwks_url: 'http://example.com',
               header_mapping: {
