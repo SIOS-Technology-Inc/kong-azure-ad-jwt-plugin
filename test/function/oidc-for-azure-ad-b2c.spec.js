@@ -601,7 +601,6 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
         expect(res.data.headers).have.property('X-Consumer-Username', 'testUsername')
         expect(res.data.headers).not.to.have.property('X-Authenticated-Client-Id')
         expect(res.data.headers).not.to.have.property('X-Authenticated-Client-Name')
-        expect(res.data.headers).not.have.property('Authorization')
       })
     })
   })

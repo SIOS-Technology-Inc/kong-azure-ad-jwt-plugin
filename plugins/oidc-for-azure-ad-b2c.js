@@ -62,9 +62,9 @@ class OidcForAzureADB2CPlugin {
 
   async access (kong) {
     try {
+      if (this.config.use_kong_auth && (await kong.request.get_header('X-Anonymous-Consumer')) !== 'true') return
       const headerToken = await kong.request.getHeader('Authorization')
       await kong.service.request.clear_header('Authorization')
-      if (this.config.use_kong_auth && (await kong.request.get_header('X-Anonymous-Consumer')) !== 'true') return
       await kong.service.request.clear_header('X-Consumer-Id')
       await kong.service.request.clear_header('X-Consumer-Username')
       if (!this.graphApiClient) {
