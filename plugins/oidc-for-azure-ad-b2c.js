@@ -1,9 +1,8 @@
 require('isomorphic-fetch')
-const mgclient = require('@microsoft/microsoft-graph-client')
 const jwksClient = require('jwks-rsa')
 const jwt = require('jsonwebtoken')
-const axios = require('axios')
 const parseBearerToken = require('parse-bearer-token').default
+const { GraphApiHelper } = require('./lib/graph-api-helper')
 
 const verifyJWT = (token, getKey, verifyOptions) => {
   return new Promise((resolve, reject) =>
@@ -25,8 +24,15 @@ const getSigningKey = (client, kid) => {
 class OidcForAzureADB2CPlugin {
   constructor (config) {
     this.config = config
-    this.graphApiBaseUrl = process.env.GRAPH_API_URL || 'https://graph.microsoft.com'
-    this.graphApiLoginUrl = process.env.GRAPH_API_LOGIN_URL || 'https://login.microsoftonline.com'
+    this.graphApiHelper = new GraphApiHelper(
+      this.config.kong_client_id,
+      this.config.kong_client_secret,
+      this.config.azure_tenant,
+      {
+        graphApiLoginUrl: process.env.GRAPH_API_LOGIN_URL,
+        graphApiBaseUrl: process.env.GRAPH_API_URL
+      }
+    )
     this.authorizationCodeJwksClient = jwksClient({
       jwksUri: config.authorization_code.jwks_url,
       cache: true,
@@ -41,25 +47,6 @@ class OidcForAzureADB2CPlugin {
     })
   }
 
-  async buildGraghapiClient () {
-    const getAccessTokenFunc = async () => {
-      const params = new URLSearchParams()
-      params.append('client_id', this.config.kong_client_id)
-      params.append('client_secret', this.config.kong_client_secret)
-      params.append('scope', 'https://graph.microsoft.com/.default')
-      params.append('grant_type', 'client_credentials')
-      return (await axios.post(`${this.graphApiLoginUrl}/${this.config.azure_tenant}/oauth2/v2.0/token`, params)).data.access_token
-    }
-
-    // When the access token expires, it will be automatically reacquired.
-    this.graphApiClient = mgclient.Client.initWithMiddleware({
-      authProvider: {
-        getAccessToken: getAccessTokenFunc
-      }
-    })
-    this.graphApiClient.config.baseUrl = this.graphApiBaseUrl
-  }
-
   async access (kong) {
     try {
       if (this.config.use_kong_auth && (await kong.request.get_header('X-Anonymous-Consumer')) !== 'true') return
@@ -67,9 +54,6 @@ class OidcForAzureADB2CPlugin {
       await kong.service.request.clear_header('Authorization')
       await kong.service.request.clear_header('X-Consumer-Id')
       await kong.service.request.clear_header('X-Consumer-Username')
-      if (!this.graphApiClient) {
-        await this.buildGraghapiClient()
-      }
       const SIGNED_KEY = process.env.SIGNED_KEY
       const token = parseBearerToken({ headers: { authorization: headerToken } })
       if (!token) {
@@ -108,9 +92,7 @@ class OidcForAzureADB2CPlugin {
       }
 
       if (decoded.iss.includes('login.microsoftonline.com')) {
-        const client = (await this.graphApiClient
-          .api(`/applications?$filter=appId eq '${decoded.azp}'`)
-          .get()).value[0]
+        const client = await this.graphApiHelper.findClient(decoded.azp)
         const data = { client, token: decoded }
         Object.keys(this.config.client_credentials.header_mapping).forEach(async key => {
           const { from, value, encode } = this.config.client_credentials.header_mapping[key]
@@ -118,12 +100,8 @@ class OidcForAzureADB2CPlugin {
           if (key) { await kong.service.request.setHeader(key, headerValue) }
         })
       } else {
-        const user = (await this.graphApiClient
-          .api(`/users/${decoded.sub}`)
-          .get()).value[0]
-        const client = (await this.graphApiClient
-          .api(`/applications?$filter=appId eq '${decoded.azp}'`)
-          .get()).value[0]
+        const user = await this.graphApiHelper.findUser(decoded.sub)
+        const client = await this.graphApiHelper.findClient(decoded.azp)
         const data = { user, client, token: decoded }
         Object.keys(this.config.authorization_code.header_mapping).forEach(async key => {
           const { from, value, encode } = this.config.authorization_code.header_mapping[key]
