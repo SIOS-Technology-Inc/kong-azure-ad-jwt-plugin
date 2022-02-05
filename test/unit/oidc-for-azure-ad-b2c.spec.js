@@ -129,6 +129,7 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
     })
     it('throws a 401 error when the aud claim does NOT equal "config.upstream_client_id"', async () => {
       const jwtPayload = {
+        iss: 'https://test.b2clogin.com',
         id: 'testId',
         role: 'testRole',
         aud: 'invalid'
@@ -277,13 +278,15 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
             'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
             'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
             'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
-          }
+          },
+          jwks_url: 'http://example.com'
         },
         client_credentials: {
           header_mapping: {
             'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
             'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
-          }
+          },
+          jwks_url: 'http://example.com'
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
@@ -318,13 +321,15 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
             'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
             'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
             'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
-          }
+          },
+          jwks_url: 'http://example.com'
         },
         client_credentials: {
           header_mapping: {
             'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
             'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
-          }
+          },
+          jwks_url: 'http://example.com'
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')

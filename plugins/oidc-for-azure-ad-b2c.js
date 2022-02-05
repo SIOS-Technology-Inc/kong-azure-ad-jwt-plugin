@@ -1,26 +1,7 @@
 require('isomorphic-fetch')
-const jwksClient = require('jwks-rsa')
-const jwt = require('jsonwebtoken')
-const parseBearerToken = require('parse-bearer-token').default
 const { GraphApiHelper } = require('./lib/graph-api-helper')
+const { JWK, JWT } = require('./lib/jwt-helper')
 
-const verifyJWT = (token, getKey, verifyOptions) => {
-  return new Promise((resolve, reject) =>
-    jwt.verify(token, getKey, verifyOptions, (err, decoded) => {
-      return resolve({ err, decoded })
-    })
-  )
-}
-const getSigningKey = (client, kid) => {
-  return new Promise((resolve, reject) => {
-    client.getSigningKey(kid, function (err, key) {
-      if (err) {
-        return reject(err)
-      }
-      return resolve({ err, signingKey: key.publicKey || key.rsaPublicKey })
-    })
-  })
-}
 class OidcForAzureADB2CPlugin {
   constructor (config) {
     this.config = config
@@ -33,18 +14,8 @@ class OidcForAzureADB2CPlugin {
         graphApiBaseUrl: process.env.GRAPH_API_URL
       }
     )
-    this.authorizationCodeJwksClient = jwksClient({
-      jwksUri: config.authorization_code.jwks_url,
-      cache: true,
-      cacheMaxEntries: 5,
-      cacheMaxAge: 600000 // 10min
-    })
-    this.clientCredentialsJwksClient = jwksClient({
-      jwksUri: config.client_credentials.jwks_url,
-      cache: true,
-      cacheMaxEntries: 5,
-      cacheMaxAge: 600000 // 10min
-    })
+    this.authorizationCodeJwk = new JWK(config.authorization_code.jwks_url)
+    this.clientCredentialsJwk = new JWK(config.client_credentials.jwks_url)
   }
 
   async access (kong) {
@@ -55,7 +26,7 @@ class OidcForAzureADB2CPlugin {
       await kong.service.request.clear_header('X-Consumer-Id')
       await kong.service.request.clear_header('X-Consumer-Username')
       const SIGNED_KEY = process.env.SIGNED_KEY
-      const token = parseBearerToken({ headers: { authorization: headerToken } })
+      const token = JWT.fromBearer(headerToken)
       if (!token) {
         return kong.response.exit(401, {
           error_description: 'The access token is missing',
@@ -63,7 +34,7 @@ class OidcForAzureADB2CPlugin {
         })
       }
 
-      const payload = jwt.decode(token)
+      const payload = token.payload()
       if (!payload) {
         kong.log.warn('invalid JWT format')
         return kong.response.exit(401, {
@@ -71,9 +42,15 @@ class OidcForAzureADB2CPlugin {
           error: 'invalid_request'
         })
       }
-
-      const signedKey = SIGNED_KEY ? { signingKey: SIGNED_KEY } : await this.getSignedKey(token, payload.extension_tenantId)
-      const { err, decoded } = await verifyJWT(token, signedKey.signingKey, { audience: this.config.upstream_client_id })
+      const { err, decoded } = payload.iss.includes('login.microsoftonline.com')
+        ? await this.clientCredentialsJwk.validate(token, {
+          audience: this.config.upstream_client_id,
+          signedKey: SIGNED_KEY
+        })
+        : await this.authorizationCodeJwk.validate(token, {
+          audience: this.config.upstream_client_id,
+          signedKey: SIGNED_KEY
+        })
       if (err) {
         if (err.name === 'TokenExpiredError') {
           return kong.response.exit(401, {
@@ -118,13 +95,6 @@ class OidcForAzureADB2CPlugin {
         error: 'Unknown_error'
       })
     }
-  }
-
-  async getSignedKey (token, tenantId) {
-    const client = tenantId ? this.authorizationCodeJwksClient : this.clientCredentialsJwksClient
-
-    const signingKey = await getSigningKey(client, jwt.decode(token, { complete: true }).header.kid)
-    return signingKey
   }
 }
 
