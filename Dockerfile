@@ -20,5 +20,5 @@ ENV KONG_PLUGINSERVER_NAMES "js"
 ENV KONG_PLUGINSERVER_JS_SOCKET "/usr/local/kong/js_pluginserver.sock"
 ENV KONG_PLUGINSERVER_JS_START_CMD "/usr/bin/kong-js-pluginserver -v --plugins-directory /usr/local/kong/js-plugins"
 ENV KONG_PLUGINSERVER_JS_QUERY_CMD "/usr/bin/kong-js-pluginserver --plugins-directory /usr/local/kong/js-plugins --dump-all-plugins"
-ENV KONG_PLUGINS "bundled,oidc-for-azure-ad-b2c"
+ENV KONG_PLUGINS "bundled,oidc-for-azure-ad,oidc-for-azure-ad-b2c"
 USER kong
