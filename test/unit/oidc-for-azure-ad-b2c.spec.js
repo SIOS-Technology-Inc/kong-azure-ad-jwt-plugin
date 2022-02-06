@@ -272,22 +272,13 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
       const mock = new KongMock({ Authorization: authorizationCodeToken })
       const plugin = new Plugin({
         upstream_client_id: 'upstream_client_id',
-        authorization_code: {
-          header_mapping: {
-            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
-            'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
-            'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
-          },
-          jwks_url: 'http://example.com'
+        header_mapping: {
+          'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+          'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+          'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+          'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
         },
-        client_credentials: {
-          header_mapping: {
-            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
-          },
-          jwks_url: 'http://example.com'
-        }
+        jwks_url: 'http://example.com'
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
       mock.request.set_header('X-Consumer-Id', 'anonymous')
@@ -309,41 +300,6 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
       expect(mock.service.request.setHeaderCalls[3]).to.deep.equal({
         name: 'X-Authenticated-User-Name',
         value: 'userName'
-      })
-    })
-    it('returns right headers for the upstream server when using client credentials flows', async () => {
-      const mock = new KongMock({ Authorization: credentialsToken })
-      const plugin = new Plugin({
-        upstream_client_id: 'upstream_client_id',
-        authorization_code: {
-          header_mapping: {
-            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
-            'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
-            'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
-          },
-          jwks_url: 'http://example.com'
-        },
-        client_credentials: {
-          header_mapping: {
-            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
-          },
-          jwks_url: 'http://example.com'
-        }
-      })
-      mock.request.set_header('X-Anonymous-Consumer', 'true')
-      mock.request.set_header('X-Consumer-Id', 'anonymous')
-      mock.service.request.setHeader('X-Consumer-Id', 'testId')
-      mock.service.request.setHeader('X-Consumer-Username', 'anonymous_users')
-      await plugin.access(mock)
-      expect(mock.service.request.setHeaderCalls[0]).to.deep.equal({
-        name: 'X-Authenticated-Client-Id',
-        value: 'clientId'
-      })
-      expect(mock.service.request.setHeaderCalls[1]).to.deep.equal({
-        name: 'X-Authenticated-Client-Name',
-        value: 'clientName'
       })
     })
     it('skips when "X-Anonymous-Consumer" from oauth2 plugin is false', async () => {

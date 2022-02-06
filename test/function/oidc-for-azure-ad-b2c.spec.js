@@ -44,21 +44,12 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
             kong_client_id: 'client_id',
             kong_client_secret: 'client_secret',
             azure_tenant: 'test.example.com',
-            authorization_code: {
-              jwks_url: 'http://example.com',
-              header_mapping: {
-                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-                'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
-                'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
-                'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
-              }
-            },
-            client_credentials: {
-              jwks_url: 'http://example.com',
-              header_mapping: {
-                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-                'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
-              }
+            jwks_url: 'http://example.com',
+            header_mapping: {
+              'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+              'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+              'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+              'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
             }
           }
         })
@@ -171,21 +162,12 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
             kong_client_id: 'client_id',
             kong_client_secret: 'client_secret',
             azure_tenant: 'test.example.com',
-            authorization_code: {
-              jwks_url: 'http://example.com',
-              header_mapping: {
-                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-                'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
-                'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
-                'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
-              }
-            },
-            client_credentials: {
-              jwks_url: 'http://example.com',
-              header_mapping: {
-                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-                'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
-              }
+            jwks_url: 'http://example.com',
+            header_mapping: {
+              'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+              'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+              'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+              'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
             }
           }
         })
@@ -301,21 +283,12 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
             kong_client_id: 'client_id',
             kong_client_secret: 'client_secret',
             azure_tenant: 'test.example.com',
-            authorization_code: {
-              jwks_url: 'http://example.com',
-              header_mapping: {
-                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-                'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
-                'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
-                'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
-              }
-            },
-            client_credentials: {
-              jwks_url: 'http://example.com',
-              header_mapping: {
-                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-                'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
-              }
+            jwks_url: 'http://example.com',
+            header_mapping: {
+              'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+              'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+              'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+              'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
             }
           }
         })
@@ -323,16 +296,10 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
         await sleep.sleep(1) // Wait for the kong settings to be reflected
       })
       let authorizationCodeToken
-      let credentialsToken
       before('getting token', async () => {
         const jwtPayloadForAuthorizationCode = {
           iss: 'https://test.b2clogin.com/',
           sub: 'userId',
-          aud: 'upstream_client_id',
-          azp: 'clientId'
-        }
-        const jwtPayloadForClientCredentials = {
-          iss: 'https://login.microsoftonline.com/',
           aud: 'upstream_client_id',
           azp: 'clientId'
         }
@@ -343,8 +310,6 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
         }
 
         authorizationCodeToken = 'Bearer ' + jwt.sign(jwtPayloadForAuthorizationCode, jwtSecret, jwtOptions)
-
-        credentialsToken = 'Bearer ' + jwt.sign(jwtPayloadForClientCredentials, jwtSecret, jwtOptions)
       })
       it('returns right headers for the upstream server when using authorization code flows', async () => {
         const res = await axios.get('http://localhost:8000/get', {
@@ -356,18 +321,6 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
         expect(res.data.headers).to.have.property('X-Authenticated-Client-Name', 'clientName')
         expect(res.data.headers).to.have.property('X-Authenticated-User-Id', 'userId')
         expect(res.data.headers).to.have.property('X-Authenticated-User-Name', 'userName')
-        expect(res.data.headers).not.have.property('X-Consumer-Id')
-        expect(res.data.headers).not.have.property('X-Consumer-Username')
-        expect(res.data.headers).not.have.property('Authorization')
-      })
-      it('returns right headers for the upstream server when using client credentials flows', async () => {
-        const res = await axios.get('http://localhost:8000/get', {
-          headers: { Host: 'httpbin.org', Authorization: credentialsToken },
-          validateStatus: (status) => status < 500
-        })
-        expect(res.status).equal(200)
-        expect(res.data.headers).to.have.property('X-Authenticated-Client-Id', 'clientId')
-        expect(res.data.headers).to.have.property('X-Authenticated-Client-Name', 'clientName')
         expect(res.data.headers).not.have.property('X-Consumer-Id')
         expect(res.data.headers).not.have.property('X-Consumer-Username')
         expect(res.data.headers).not.have.property('Authorization')
@@ -416,21 +369,12 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
             kong_client_id: 'client_id',
             kong_client_secret: 'client_secret',
             azure_tenant: 'test.example.com',
-            authorization_code: {
-              jwks_url: 'http://example.com',
-              header_mapping: {
-                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-                'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
-                'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
-                'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
-              }
-            },
-            client_credentials: {
-              jwks_url: 'http://example.com',
-              header_mapping: {
-                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-                'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
-              }
+            jwks_url: 'http://example.com',
+            header_mapping: {
+              'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+              'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+              'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+              'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
             }
           }
         })
@@ -446,16 +390,10 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
         await sleep.sleep(1) // Wait for the kong settings to be reflected
       })
       let authorizationCodeToken
-      let credentialsToken
       before('getting token', async () => {
         const jwtPayloadForAuthorizationCode = {
           iss: 'https://test.b2clogin.com/',
           sub: 'userId',
-          aud: 'upstream_client_id',
-          azp: 'clientId'
-        }
-        const jwtPayloadForClientCredentials = {
-          iss: 'https://login.microsoftonline.com/',
           aud: 'upstream_client_id',
           azp: 'clientId'
         }
@@ -466,8 +404,6 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
         }
 
         authorizationCodeToken = 'Bearer ' + jwt.sign(jwtPayloadForAuthorizationCode, jwtSecret, jwtOptions)
-
-        credentialsToken = 'Bearer ' + jwt.sign(jwtPayloadForClientCredentials, jwtSecret, jwtOptions)
       })
       it('returns right headers for the upstream server when using authorization code flows', async () => {
         const res = await axios.get('http://localhost:8000/get', {
@@ -479,18 +415,6 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
         expect(res.data.headers).to.have.property('X-Authenticated-Client-Name', 'clientName')
         expect(res.data.headers).to.have.property('X-Authenticated-User-Id', 'userId')
         expect(res.data.headers).to.have.property('X-Authenticated-User-Name', 'userName')
-        expect(res.data.headers).not.have.property('X-Consumer-Id')
-        expect(res.data.headers).not.have.property('X-Consumer-Username')
-        expect(res.data.headers).not.have.property('Authorization')
-      })
-      it('returns right headers for the upstream server when using client credentials flows', async () => {
-        const res = await axios.get('http://localhost:8000/get', {
-          headers: { Host: 'httpbin.org', Authorization: credentialsToken },
-          validateStatus: (status) => status < 500
-        })
-        expect(res.status).equal(200)
-        expect(res.data.headers).to.have.property('X-Authenticated-Client-Id', 'clientId')
-        expect(res.data.headers).to.have.property('X-Authenticated-Client-Name', 'clientName')
         expect(res.data.headers).not.have.property('X-Consumer-Id')
         expect(res.data.headers).not.have.property('X-Consumer-Username')
         expect(res.data.headers).not.have.property('Authorization')
@@ -540,21 +464,12 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
             kong_client_secret: 'client_secret',
             azure_tenant: 'test.example.com',
             use_kong_auth: true,
-            authorization_code: {
-              jwks_url: 'http://example.com',
-              header_mapping: {
-                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-                'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
-                'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
-                'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
-              }
-            },
-            client_credentials: {
-              jwks_url: 'http://example.com',
-              header_mapping: {
-                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-                'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
-              }
+            jwks_url: 'http://example.com',
+            header_mapping: {
+              'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+              'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+              'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
+              'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
             }
           }
         })

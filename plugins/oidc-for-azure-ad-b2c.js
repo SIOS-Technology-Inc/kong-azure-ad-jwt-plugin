@@ -14,8 +14,7 @@ class OidcForAzureADB2CPlugin {
         graphApiBaseUrl: process.env.GRAPH_API_URL
       }
     )
-    this.authorizationCodeJwk = new JWK(config.authorization_code.jwks_url)
-    this.clientCredentialsJwk = new JWK(config.client_credentials.jwks_url)
+    this.authorizationCodeJwk = new JWK(config.jwks_url)
   }
 
   async access (kong) {
@@ -42,15 +41,10 @@ class OidcForAzureADB2CPlugin {
           error: 'invalid_request'
         })
       }
-      const { err, decoded } = payload.iss.includes('login.microsoftonline.com')
-        ? await this.clientCredentialsJwk.validate(token, {
-          audience: this.config.upstream_client_id,
-          signedKey: SIGNED_KEY
-        })
-        : await this.authorizationCodeJwk.validate(token, {
-          audience: this.config.upstream_client_id,
-          signedKey: SIGNED_KEY
-        })
+      const { err, decoded } = await this.authorizationCodeJwk.validate(token, {
+        audience: this.config.upstream_client_id,
+        signedKey: SIGNED_KEY
+      })
       if (err) {
         if (err.name === 'TokenExpiredError') {
           return kong.response.exit(401, {
@@ -68,24 +62,14 @@ class OidcForAzureADB2CPlugin {
         }
       }
 
-      if (decoded.iss.includes('login.microsoftonline.com')) {
-        const client = await this.graphApiHelper.findClient(decoded.azp)
-        const data = { client, token: decoded }
-        Object.keys(this.config.client_credentials.header_mapping).forEach(async key => {
-          const { from, value, encode } = this.config.client_credentials.header_mapping[key]
-          const headerValue = encode === 'url_encode' ? encodeURIComponent(data[from][value]) : data[from][value]
-          if (key) { await kong.service.request.setHeader(key, headerValue) }
-        })
-      } else {
-        const user = await this.graphApiHelper.findUser(decoded.sub)
-        const client = await this.graphApiHelper.findClient(decoded.azp)
-        const data = { user, client, token: decoded }
-        Object.keys(this.config.authorization_code.header_mapping).forEach(async key => {
-          const { from, value, encode } = this.config.authorization_code.header_mapping[key]
-          const headerValue = encode === 'url_encode' ? encodeURIComponent(data[from][value]) : data[from][value]
-          if (key) { await kong.service.request.setHeader(key, headerValue) }
-        })
-      }
+      const user = await this.graphApiHelper.findUser(decoded.sub)
+      const client = await this.graphApiHelper.findClient(decoded.azp)
+      const data = { user, client, token: decoded }
+      Object.keys(this.config.header_mapping).forEach(async key => {
+        const { from, value, encode } = this.config.header_mapping[key]
+        const headerValue = encode === 'url_encode' ? encodeURIComponent(data[from][value]) : data[from][value]
+        if (key) { await kong.service.request.setHeader(key, headerValue) }
+      })
     } catch (e) {
       kong.log.err(JSON.stringify(e))
       kong.log.err(JSON.stringify(e.message))
@@ -106,59 +90,23 @@ module.exports = {
     { kong_client_secret: { type: 'string', required: true } },
     { azure_tenant: { type: 'string', required: true } },
     { use_kong_auth: { type: 'boolean', default: false } },
+    { jwks_url: { type: 'string', required: true } },
     {
-      authorization_code: {
-        type: 'record',
-        required: true,
-        fields: [
-          { jwks_url: { type: 'string', required: true } },
-          {
-            header_mapping: {
-              type: 'map',
-              required: false,
-              keys: { type: 'string' },
-              values: {
-                type: 'record',
-                fields: [
-                  { from: { type: 'string', one_of: ['token', 'user', 'client'] } },
-                  { value: { type: 'string' } },
-                  { encode: { type: 'string', one_of: ['none', 'url_encode'], default: 'none' } }
-                ]
-              },
-              default: {
-                'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-                'X-Authenticated-User-Id': { from: 'token', value: 'sub' }
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      client_credentials: {
-        type: 'record',
-        fields: [
-          { jwks_url: { type: 'string', default: 'https://login.microsoftonline.com/common/discovery/keys' } },
-          {
-            header_mapping: {
-              type: 'map',
-              required: false,
-              keys: { type: 'string' },
-              values: {
-                type: 'record',
-                fields: [
-                  { from: { type: 'string', one_of: ['token', 'client'] } },
-                  { value: { type: 'string' } },
-                  { encode: { type: 'string', one_of: ['none', 'url_encode'], default: 'none' } }
-                ]
-              }
-            }
-          }
-        ],
+      header_mapping: {
+        type: 'map',
+        required: false,
+        keys: { type: 'string' },
+        values: {
+          type: 'record',
+          fields: [
+            { from: { type: 'string', one_of: ['token', 'user', 'client'] } },
+            { value: { type: 'string' } },
+            { encode: { type: 'string', one_of: ['none', 'url_encode'], default: 'none' } }
+          ]
+        },
         default: {
-          header_mapping: {
-            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' }
-          }
+          'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+          'X-Authenticated-User-Id': { from: 'token', value: 'sub' }
         }
       }
     }
