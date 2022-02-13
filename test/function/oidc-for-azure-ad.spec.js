@@ -3,33 +3,15 @@ const expect = chai.expect
 const jwt = require('jsonwebtoken')
 const axios = require('axios')
 const sleep = require('sleep')
+const { reset } = require('../utils/kong')
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 describe('Function test for Azure AD OIDC Plugin', () => {
-  before('wait', async () => {
-    await sleep.sleep(1)
-  })
   describe('Abnormal', () => {
     describe('when Kong Auth Plugin is NOT used', () => {
+      before('clear', reset)
       before('setting kong', async () => {
-        const allRoutes = (await axios.get('http://localhost:8001/routes')).data.data
-        await Promise.all(allRoutes.map(async route => {
-          const allPlugins = (await axios.get(`http://localhost:8001/routes/${route.id}/plugins`)).data.data
-          await Promise.all(allPlugins.map(async plugin => {
-            await axios.delete(`http://localhost:8001/routes/${route.id}/plugins/${plugin.id}`)
-          }))
-          await axios.delete(`http://localhost:8001/routes/${route.id}`)
-        }))
-        const allConsumers = (await axios.get('http://localhost:8001/consumers')).data.data
-        await Promise.all(allConsumers.map(async consumer => {
-          await axios.delete(`http://localhost:8001/consumers/${consumer.id}`)
-        }))
-        const allServices = (await axios.get('http://localhost:8001/services')).data.data
-        await Promise.all(allServices.map(async service => {
-          await axios.delete(`http://localhost:8001/services/${service.id}`)
-        }))
-
         await axios.post('http://localhost:8001/services', {
           name: 'httpbin',
           url: 'http://kong-upstream-server'
@@ -121,24 +103,8 @@ describe('Function test for Azure AD OIDC Plugin', () => {
       })
     })
     describe('when Kong Auth Plugin is used', () => {
+      before('clear', reset)
       before('setting kong', async () => {
-        const allRoutes = (await axios.get('http://localhost:8001/routes')).data.data
-        await Promise.all(allRoutes.map(async route => {
-          const allPlugins = (await axios.get(`http://localhost:8001/routes/${route.id}/plugins`)).data.data
-          await Promise.all(allPlugins.map(async plugin => {
-            await axios.delete(`http://localhost:8001/routes/${route.id}/plugins/${plugin.id}`)
-          }))
-          await axios.delete(`http://localhost:8001/routes/${route.id}`)
-        }))
-        const allConsumers = (await axios.get('http://localhost:8001/consumers')).data.data
-        await Promise.all(allConsumers.map(async consumer => {
-          await axios.delete(`http://localhost:8001/consumers/${consumer.id}`)
-        }))
-        const allServices = (await axios.get('http://localhost:8001/services')).data.data
-        await Promise.all(allServices.map(async service => {
-          await axios.delete(`http://localhost:8001/services/${service.id}`)
-        }))
-
         await axios.post('http://localhost:8001/services', {
           name: 'httpbin',
           url: 'http://kong-upstream-server'
@@ -247,24 +213,8 @@ describe('Function test for Azure AD OIDC Plugin', () => {
   })
   describe('Normal', () => {
     describe('when Kong Auth Plugin is NOT used', () => {
+      before('clear', reset)
       before('setting kong', async () => {
-        const allRoutes = (await axios.get('http://localhost:8001/routes')).data.data
-        await Promise.all(allRoutes.map(async route => {
-          const allPlugins = (await axios.get(`http://localhost:8001/routes/${route.id}/plugins`)).data.data
-          await Promise.all(allPlugins.map(async plugin => {
-            await axios.delete(`http://localhost:8001/routes/${route.id}/plugins/${plugin.id}`)
-          }))
-          await axios.delete(`http://localhost:8001/routes/${route.id}`)
-        }))
-        const allConsumers = (await axios.get('http://localhost:8001/consumers')).data.data
-        await Promise.all(allConsumers.map(async consumer => {
-          await axios.delete(`http://localhost:8001/consumers/${consumer.id}`)
-        }))
-        const allServices = (await axios.get('http://localhost:8001/services')).data.data
-        await Promise.all(allServices.map(async service => {
-          await axios.delete(`http://localhost:8001/services/${service.id}`)
-        }))
-
         await axios.post('http://localhost:8001/services', {
           name: 'httpbin',
           url: 'http://kong-upstream-server'
@@ -321,24 +271,8 @@ describe('Function test for Azure AD OIDC Plugin', () => {
       })
     })
     describe('when an access token is NOT allowed at OAuth2 Plugin', () => {
+      before('clear', reset)
       before('setting kong', async () => {
-        const allRoutes = (await axios.get('http://localhost:8001/routes')).data.data
-        await Promise.all(allRoutes.map(async route => {
-          const allPlugins = (await axios.get(`http://localhost:8001/routes/${route.id}/plugins`)).data.data
-          await Promise.all(allPlugins.map(async plugin => {
-            await axios.delete(`http://localhost:8001/routes/${route.id}/plugins/${plugin.id}`)
-          }))
-          await axios.delete(`http://localhost:8001/routes/${route.id}`)
-        }))
-        const allConsumers = (await axios.get('http://localhost:8001/consumers')).data.data
-        await Promise.all(allConsumers.map(async consumer => {
-          await axios.delete(`http://localhost:8001/consumers/${consumer.id}`)
-        }))
-        const allServices = (await axios.get('http://localhost:8001/services')).data.data
-        await Promise.all(allServices.map(async service => {
-          await axios.delete(`http://localhost:8001/services/${service.id}`)
-        }))
-
         await axios.post('http://localhost:8001/services', {
           name: 'httpbin',
           url: 'http://kong-upstream-server'
@@ -410,24 +344,8 @@ describe('Function test for Azure AD OIDC Plugin', () => {
       })
     })
     describe('when an access token is allowed at OAuth2 Plugin', () => {
+      before('clear', reset)
       before('setting kong', async () => {
-        const allRoutes = (await axios.get('http://localhost:8001/routes')).data.data
-        await Promise.all(allRoutes.map(async route => {
-          const allPlugins = (await axios.get(`http://localhost:8001/routes/${route.id}/plugins`)).data.data
-          await Promise.all(allPlugins.map(async plugin => {
-            await axios.delete(`http://localhost:8001/routes/${route.id}/plugins/${plugin.id}`)
-          }))
-          await axios.delete(`http://localhost:8001/routes/${route.id}`)
-        }))
-        const allConsumers = (await axios.get('http://localhost:8001/consumers')).data.data
-        await Promise.all(allConsumers.map(async consumer => {
-          await axios.delete(`http://localhost:8001/consumers/${consumer.id}`)
-        }))
-        const allServices = (await axios.get('http://localhost:8001/services')).data.data
-        await Promise.all(allServices.map(async service => {
-          await axios.delete(`http://localhost:8001/services/${service.id}`)
-        }))
-
         await axios.post('http://localhost:8001/services', {
           name: 'httpbin',
           url: 'http://kong-upstream-server'
@@ -485,7 +403,7 @@ describe('Function test for Azure AD OIDC Plugin', () => {
             client_secret: 'testClientSecret',
             redirect_uris: ['https://example.com']
           })
-          await sleep.sleep(1)
+          await sleep.sleep(2)
           kongCredentialsToken = (await axios.post('https://localhost:8443/oauth2/token', {
             client_id: 'testClientId',
             client_secret: 'testClientSecret',
