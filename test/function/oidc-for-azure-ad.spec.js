@@ -2,42 +2,31 @@ const chai = require('chai')
 const expect = chai.expect
 const jwt = require('jsonwebtoken')
 const axios = require('axios')
-const sleep = require('sleep')
-const { reset } = require('../utils/kong')
+const axiosRetry = require('axios-retry')
+const uuid = require('uuid')
+const kong = require('../utils/kong')
+const { httpbinService, httpbinRoute, oidcForAzureADPlugin } = require('../kong-setting')
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 describe('Function test for Azure AD OIDC Plugin', () => {
   describe('Abnormal', () => {
     describe('when Kong Auth Plugin is NOT used', () => {
-      before('clear', reset)
       before('setting kong', async () => {
-        await axios.post('http://localhost:8001/services', {
-          name: 'httpbin',
-          url: 'http://kong-upstream-server'
-        })
-        await axios.post('http://localhost:8001/services/httpbin/routes', {
-          hosts: ['httpbin.org'],
-          name: 'httpbin-route',
-          protocols: ['http'],
-          strip_path: false
-        })
-        await axios.post('http://localhost:8001/routes/httpbin-route/plugins', {
-          name: 'oidc-for-azure-ad',
-          config: {
-            upstream_client_id: 'upstream_client_id',
-            kong_client_id: 'client_id',
-            kong_client_secret: 'client_secret',
-            azure_tenant: 'test.example.com',
-            jwks_url: 'http://example.com',
-            header_mapping: {
-              'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-              'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+        await kong.reset()
+        await kong.sync({
+          services: [
+            {
+              ...httpbinService,
+              routes: [
+                {
+                  ...httpbinRoute,
+                  plugins: [oidcForAzureADPlugin]
+                }
+              ]
             }
-          }
+          ]
         })
-
-        await sleep.sleep(1) // Wait for the kong settings to be reflected
       })
       it('throws a 401 error when no access token is provided', async () => {
         const res = await axios.get('http://localhost:8000/get', {
@@ -58,7 +47,7 @@ describe('Function test for Azure AD OIDC Plugin', () => {
         const jwtSecret = 'testSecretKey'
         const jwtOptions = {
           algorithm: 'HS256',
-          expiresIn: '0s'
+          expiresIn: '-1s'
         }
         const expiredToken = 'Bearer ' + jwt.sign(jwtPayload, jwtSecret, jwtOptions)
 
@@ -103,49 +92,38 @@ describe('Function test for Azure AD OIDC Plugin', () => {
       })
     })
     describe('when Kong Auth Plugin is used', () => {
-      before('clear', reset)
       before('setting kong', async () => {
-        await axios.post('http://localhost:8001/services', {
-          name: 'httpbin',
-          url: 'http://kong-upstream-server'
-        })
-        await axios.post('http://localhost:8001/services/httpbin/routes', {
-          hosts: ['httpbin.org'],
-          name: 'httpbin-route',
-          protocols: ['http'],
-          strip_path: false
-        })
-        const oauthPluginId = (await axios.post('http://localhost:8001/routes/httpbin-route/plugins', {
-          name: 'oauth2',
-          config: {
-            enable_client_credentials: true
-          },
-          enabled: true
-        })).data.id
-        await axios.post('http://localhost:8001/routes/httpbin-route/plugins', {
-          name: 'oidc-for-azure-ad',
-          config: {
-            upstream_client_id: 'upstream_client_id',
-            kong_client_id: 'client_id',
-            kong_client_secret: 'client_secret',
-            azure_tenant: 'test.example.com',
-            jwks_url: 'http://example.com',
-            header_mapping: {
-              'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-              'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+        const anonymousId = uuid.v4()
+        await kong.reset()
+        await kong.sync({
+          consumers: [
+            {
+              id: anonymousId,
+              username: 'anonymous_users'
             }
-          }
+          ],
+          services: [
+            {
+              ...httpbinService,
+              routes: [
+                {
+                  ...httpbinRoute,
+                  plugins: [
+                    {
+                      name: 'oauth2',
+                      config: {
+                        enable_client_credentials: true,
+                        anonymous: anonymousId
+                      },
+                      enabled: true
+                    },
+                    oidcForAzureADPlugin
+                  ]
+                }
+              ]
+            }
+          ]
         })
-        const anonymousConsumerId = (await axios.post('http://localhost:8001/consumers', {
-          username: 'anonymous_users'
-        })).data.id
-        await axios.patch(`http://localhost:8001/plugins/${oauthPluginId}`, {
-          config: {
-            anonymous: anonymousConsumerId
-          }
-        })
-
-        await sleep.sleep(1) // Wait for the kong settings to be reflected
       })
       it('throws a 401 error when no access token is provided', async () => {
         const res = await axios.get('http://localhost:8000/get', {
@@ -166,7 +144,7 @@ describe('Function test for Azure AD OIDC Plugin', () => {
         const jwtSecret = 'testSecretKey'
         const jwtOptions = {
           algorithm: 'HS256',
-          expiresIn: '0s'
+          expiresIn: '-1s'
         }
         const expiredToken = 'Bearer ' + jwt.sign(jwtPayload, jwtSecret, jwtOptions)
 
@@ -213,34 +191,21 @@ describe('Function test for Azure AD OIDC Plugin', () => {
   })
   describe('Normal', () => {
     describe('when Kong Auth Plugin is NOT used', () => {
-      before('clear', reset)
       before('setting kong', async () => {
-        await axios.post('http://localhost:8001/services', {
-          name: 'httpbin',
-          url: 'http://kong-upstream-server'
-        })
-        await axios.post('http://localhost:8001/services/httpbin/routes', {
-          hosts: ['httpbin.org'],
-          name: 'httpbin-route',
-          protocols: ['http'],
-          strip_path: false
-        })
-        await axios.post('http://localhost:8001/routes/httpbin-route/plugins', {
-          name: 'oidc-for-azure-ad',
-          config: {
-            upstream_client_id: 'upstream_client_id',
-            kong_client_id: 'client_id',
-            kong_client_secret: 'client_secret',
-            azure_tenant: 'test.example.com',
-            jwks_url: 'http://example.com',
-            header_mapping: {
-              'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-              'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+        await kong.reset()
+        await kong.sync({
+          services: [
+            {
+              ...httpbinService,
+              routes: [
+                {
+                  ...httpbinRoute,
+                  plugins: [oidcForAzureADPlugin]
+                }
+              ]
             }
-          }
+          ]
         })
-
-        await sleep.sleep(1) // Wait for the kong settings to be reflected
       })
       let credentialsToken
       before('getting token', async () => {
@@ -271,49 +236,38 @@ describe('Function test for Azure AD OIDC Plugin', () => {
       })
     })
     describe('when an access token is NOT allowed at OAuth2 Plugin', () => {
-      before('clear', reset)
       before('setting kong', async () => {
-        await axios.post('http://localhost:8001/services', {
-          name: 'httpbin',
-          url: 'http://kong-upstream-server'
-        })
-        await axios.post('http://localhost:8001/services/httpbin/routes', {
-          hosts: ['httpbin.org'],
-          name: 'httpbin-route',
-          protocols: ['http'],
-          strip_path: false
-        })
-        const oauthPluginId = (await axios.post('http://localhost:8001/routes/httpbin-route/plugins', {
-          name: 'oauth2',
-          config: {
-            enable_client_credentials: true
-          },
-          enabled: true
-        })).data.id
-        await axios.post('http://localhost:8001/routes/httpbin-route/plugins', {
-          name: 'oidc-for-azure-ad',
-          config: {
-            upstream_client_id: 'upstream_client_id',
-            kong_client_id: 'client_id',
-            kong_client_secret: 'client_secret',
-            azure_tenant: 'test.example.com',
-            jwks_url: 'http://example.com',
-            header_mapping: {
-              'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-              'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+        const anonymousId = uuid.v4()
+        await kong.reset()
+        await kong.sync({
+          consumers: [
+            {
+              id: anonymousId,
+              username: 'anonymous_users'
             }
-          }
+          ],
+          services: [
+            {
+              ...httpbinService,
+              routes: [
+                {
+                  ...httpbinRoute,
+                  plugins: [
+                    {
+                      name: 'oauth2',
+                      config: {
+                        enable_client_credentials: true,
+                        anonymous: anonymousId
+                      },
+                      enabled: true
+                    },
+                    oidcForAzureADPlugin
+                  ]
+                }
+              ]
+            }
+          ]
         })
-        const anonymousConsumerId = (await axios.post('http://localhost:8001/consumers', {
-          username: 'anonymous_users'
-        })).data.id
-        await axios.patch(`http://localhost:8001/plugins/${oauthPluginId}`, {
-          config: {
-            anonymous: anonymousConsumerId
-          }
-        })
-
-        await sleep.sleep(1) // Wait for the kong settings to be reflected
       })
       let credentialsToken
       before('getting token', async () => {
@@ -344,77 +298,73 @@ describe('Function test for Azure AD OIDC Plugin', () => {
       })
     })
     describe('when an access token is allowed at OAuth2 Plugin', () => {
-      before('clear', reset)
+      const oauthPluginConsumerId = uuid.v4()
       before('setting kong', async () => {
-        await axios.post('http://localhost:8001/services', {
-          name: 'httpbin',
-          url: 'http://kong-upstream-server'
-        })
-        await axios.post('http://localhost:8001/services/httpbin/routes', {
-          hosts: ['httpbin.org'],
-          name: 'httpbin-route',
-          protocols: ['http'],
-          strip_path: false
-        })
-        const oauthPluginId = (await axios.post('http://localhost:8001/routes/httpbin-route/plugins', {
-          name: 'oauth2',
-          config: {
-            enable_client_credentials: true
-          },
-          enabled: true
-        })).data.id
-        await axios.post('http://localhost:8001/routes/httpbin-route/plugins', {
-          name: 'oidc-for-azure-ad',
-          config: {
-            upstream_client_id: 'upstream_client_id',
-            kong_client_id: 'client_id',
-            kong_client_secret: 'client_secret',
-            azure_tenant: 'test.example.com',
-            use_kong_auth: true,
-            jwks_url: 'http://example.com',
-            header_mapping: {
-              'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-              'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+        const anonymousId = uuid.v4()
+        await kong.reset()
+        await kong.sync({
+          consumers: [
+            {
+              id: anonymousId,
+              username: 'anonymous_users'
+            },
+            {
+              id: oauthPluginConsumerId,
+              username: 'testUsername',
+              oauth2_credentials: [
+                {
+                  name: 'testApp',
+                  client_id: 'testClientId',
+                  client_secret: 'testClientSecret',
+                  redirect_uris: ['https://example.com']
+                }
+              ]
             }
-          }
+          ],
+          services: [
+            {
+              ...httpbinService,
+              routes: [
+                {
+                  ...httpbinRoute,
+                  plugins: [
+                    {
+                      name: 'oauth2',
+                      config: {
+                        enable_client_credentials: true,
+                        anonymous: anonymousId
+                      },
+                      enabled: true
+                    },
+                    {
+                      ...oidcForAzureADPlugin,
+                      config: {
+                        ...oidcForAzureADPlugin.config,
+                        use_kong_auth: true
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         })
-        const anonymousConsumerId = (await axios.post('http://localhost:8001/consumers', {
-          username: 'anonymous_users'
-        })).data.id
-        await axios.patch(`http://localhost:8001/plugins/${oauthPluginId}`, {
-          config: {
-            anonymous: anonymousConsumerId
-          }
-        })
-
-        await sleep.sleep(1) // Wait for the kong settings to be reflected
       })
       let kongCredentialsToken
-      let oauthPluginConsumerId
       before('creating kong consumer and getting token', async () => {
-        try {
-          oauthPluginConsumerId = (await axios.post('http://localhost:8001/consumers', {
-            username: 'testUsername'
-          })).data.id
-
-          await axios.post(`http://localhost:8001/consumers/${oauthPluginConsumerId}/oauth2`, {
-            name: 'testApp',
-            client_id: 'testClientId',
-            client_secret: 'testClientSecret',
-            redirect_uris: ['https://example.com']
-          })
-          await sleep.sleep(2)
-          kongCredentialsToken = (await axios.post('https://localhost:8443/oauth2/token', {
-            client_id: 'testClientId',
-            client_secret: 'testClientSecret',
-            grant_type: 'client_credentials'
-          }, {
-            headers: { Host: 'httpbin.org' }
-          })).data.access_token
-        } catch (e) {
-          console.log(e)
-          throw e
-        }
+        const client = axios.create({ baseURL: 'https://localhost:8443' })
+        axiosRetry(client, {
+          retries: 5,
+          retryDelay: axiosRetry.exponentialDelay,
+          retryCondition: (error) => error.response.status >= 300
+        })
+        kongCredentialsToken = (await client.post('/oauth2/token', {
+          client_id: 'testClientId',
+          client_secret: 'testClientSecret',
+          grant_type: 'client_credentials'
+        }, {
+          headers: { Host: 'httpbin.org' }
+        })).data.access_token
       })
       it('returns right headers for the upstream server', async () => {
         const res = await axios.get('http://localhost:8000/get', {

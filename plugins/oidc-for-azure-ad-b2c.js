@@ -20,6 +20,7 @@ class OidcForAzureADB2CPlugin {
   async access (kong) {
     try {
       if (this.config.use_kong_auth && (await kong.request.get_header('X-Anonymous-Consumer')) !== 'true') return
+      if ((await kong.request.get_header('X-Anonymous')) === 'false') return
       const headerToken = await kong.request.getHeader('Authorization')
       await kong.service.request.clear_header('Authorization')
       await kong.service.request.clear_header('X-Consumer-Id')
@@ -46,6 +47,10 @@ class OidcForAzureADB2CPlugin {
         signedKey: SIGNED_KEY
       })
       if (err) {
+        if (this.config.permit_anonymous) {
+          await kong.service.request.setHeader('X-Anonymous', 'true')
+          return
+        }
         if (err.name === 'TokenExpiredError') {
           return kong.response.exit(401, {
             error_description: 'The access token is expired',
@@ -70,6 +75,7 @@ class OidcForAzureADB2CPlugin {
         const headerValue = encode === 'url_encode' ? encodeURIComponent(data[from][value]) : data[from][value]
         if (key) { await kong.service.request.setHeader(key, headerValue) }
       })
+      await kong.service.request.setHeader('X-Anonymous', 'false')
     } catch (e) {
       kong.log.err(JSON.stringify(e))
       kong.log.err(JSON.stringify(e.message))
@@ -112,5 +118,5 @@ module.exports = {
     }
   ],
   Version: '0.1.0',
-  Priority: 999
+  Priority: 998
 }

@@ -28,7 +28,8 @@ class KongMock {
         this.request.headerCalls.push({ name, value })
       },
       get_header: (name) => {
-        return this.request.headerCalls.find(headerCall => headerCall.name === name).value
+        const header = this.request.headerCalls.find(headerCall => headerCall.name === name)
+        return header ? header.value : undefined
       }
     }
     this.response = {
@@ -50,7 +51,7 @@ class KongMock {
   }
 }
 
-describe('Unit test for Azure AD B2C OIDC Plugin', () => {
+describe('Unit test for Azure AD OIDC Plugin', () => {
   describe('Abnormal', () => {
     before('getting token', async () => {
       process.env.SIGNED_KEY = 'testSecretKey'
@@ -206,8 +207,8 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         error_description: 'Unknown_error',
         error: 'Unknown_error'
       })
-      expect(mock.errCalls[1]).to.include('Cannot read property \'getHeader\' of null')
-      expect(mock.errCalls[2]).to.include('TypeError: Cannot read property \'getHeader\' of null')
+      expect(mock.errCalls[1]).to.include('Cannot read property \'get_header\' of null')
+      expect(mock.errCalls[2]).to.include('TypeError: Cannot read property \'get_header\' of null')
     })
   })
 
