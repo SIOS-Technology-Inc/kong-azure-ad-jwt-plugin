@@ -11,7 +11,7 @@ class GraphApiHelper {
       params.append('client_secret', clientSecret)
       params.append('scope', 'https://graph.microsoft.com/.default')
       params.append('grant_type', 'client_credentials')
-      return (await axios.post(`${options.graphApiLoginUrl}/${azureTenant}/oauth2/v2.0/token`, params)).data.access_token
+      return (await axios.post(`${options.graphApiLoginUrl}/${azureTenant}.onmicrosoft.com/oauth2/v2.0/token`, params)).data.access_token
     }
 
     // When the access token expires, it will be automatically reacquired.
