@@ -75,12 +75,7 @@ describe('Unit test for Azure AD OIDC Plugin', () => {
     it('throws a 401 error when no access token is provided', async () => {
       const mock = new KongMock({ Authorization: null })
       const plugin = new Plugin({
-        authorization_code: {
-          jwks_url: 'http://example.com'
-        },
-        client_credentials: {
-          jwks_url: 'http://example.com'
-        }
+        jwks_url: 'http://example.com'
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
       mock.request.set_header('X-Consumer-Id', 'anonymous')
@@ -110,12 +105,7 @@ describe('Unit test for Azure AD OIDC Plugin', () => {
       const mock = new KongMock({ Authorization: expiredToken })
       const plugin = new Plugin({
         upstream_client_id: 'upstream_client_id',
-        authorization_code: {
-          jwks_url: 'http://example.com'
-        },
-        client_credentials: {
-          jwks_url: 'http://example.com'
-        }
+        jwks_url: 'http://example.com'
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
       mock.request.set_header('X-Consumer-Id', 'anonymous')
@@ -146,12 +136,7 @@ describe('Unit test for Azure AD OIDC Plugin', () => {
       const mock = new KongMock({ Authorization: invalidAudToken })
       const plugin = new Plugin({
         upstream_client_id: 'client_id',
-        authorization_code: {
-          jwks_url: 'http://example.com'
-        },
-        client_credentials: {
-          jwks_url: 'http://example.com'
-        }
+        jwks_url: 'http://example.com'
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
       mock.request.set_header('X-Consumer-Id', 'anonymous')
@@ -171,12 +156,7 @@ describe('Unit test for Azure AD OIDC Plugin', () => {
       const mock = new KongMock({ Authorization: 'Bearer invalidToken' })
       const plugin = new Plugin({
         upstream_client_id: 'upstream_client_id',
-        authorization_code: {
-          jwks_url: 'http://example.com'
-        },
-        client_credentials: {
-          jwks_url: 'http://example.com'
-        }
+        jwks_url: 'http://example.com'
       })
       mock.request.set_header('X-Anonymous-Consumer', 'true')
       mock.request.set_header('X-Consumer-Id', 'anonymous')
@@ -193,12 +173,7 @@ describe('Unit test for Azure AD OIDC Plugin', () => {
     it('throws a 500 error when system error is occurred', async () => {
       const mock = new KongMock()
       const plugin = new Plugin({
-        authorization_code: {
-          jwks_url: 'http://example.com'
-        },
-        client_credentials: {
-          jwks_url: 'http://example.com'
-        }
+        jwks_url: 'http://example.com'
       })
       mock.request = null // Make the request null and intentionally give an error
       await plugin.access(mock)
