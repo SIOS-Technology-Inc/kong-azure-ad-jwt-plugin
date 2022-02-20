@@ -24,15 +24,17 @@ class GraphApiHelper {
   }
 
   async findClient (clientId) {
-    return (await this.graphApiClient
+    const client = await this.graphApiClient
       .api(`/applications?$filter=appId eq '${clientId}'`)
-      .get()).value[0]
+      .get()
+    return client.value ? client.value[0] : undefined
   }
 
   async findUser (userId) {
-    return (await this.graphApiClient
-      .api(`/users/${userId}`)
-      .get()).value[0]
+    const user = await this.graphApiClient
+      .api(`/users?$filter=id eq '${userId}'`)
+      .get()
+    return user.value ? user.value[0] : undefined
   }
 }
 

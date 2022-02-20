@@ -31,7 +31,7 @@ module.exports = {
         },
         default: {
           'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-          'X-Authenticated-User-Id': { from: 'token', value: 'sub' }
+          'X-Authenticated-User-Id': { from: 'user', value: 'id' }
         }
       }
     },

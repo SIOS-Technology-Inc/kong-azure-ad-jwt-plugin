@@ -41,7 +41,7 @@ class OidcForAzure {
           error: 'invalid_request'
         })
       }
-      const { err, decoded } = await this.jwk().validate(token, {
+      const { err, decoded } = await this.jwk(payload).validate(token, {
         audience: this.config.upstream_client_id,
         signedKey: SIGNED_KEY
       })
@@ -66,11 +66,12 @@ class OidcForAzure {
         }
       }
 
-      const user = await this.graphApiHelper.findUser(decoded.sub)
+      const user = decoded.name ? await this.graphApiHelper.findUser(decoded.oid) : undefined
       const client = await this.graphApiHelper.findClient(decoded.azp)
       const data = { user, client, token: decoded }
       Object.keys(this.config.header_mapping).forEach(async key => {
         const { from, value, encode } = this.config.header_mapping[key]
+        if (!(data[from] || {})[value]) return
         const headerValue = encode === 'url_encode' ? encodeURIComponent(data[from][value]) : data[from][value]
         if (key) { await kong.service.request.setHeader(key, headerValue) }
       })

@@ -2,8 +2,8 @@ const { OidcForAzure } = require('./lib/oidc-for-azure')
 const { JWK } = require('./lib/jwt-helper')
 
 class OidcForAzureADB2CPlugin extends OidcForAzure {
-  jwk () {
-    return new JWK(`https://${this.config.azure_tenant}.b2clogin.com/${this.config.azure_tenant}.onmicrosoft.com/b2c_1_signupsignin1/v2.0/.well-known/openid-configuration`)
+  jwk (token) {
+    return new JWK(`https://${this.config.azure_tenant}.b2clogin.com/${this.config.azure_tenant}.onmicrosoft.com/${token.tfp}/discovery/v2.0/keys`)
   }
 }
 
