@@ -28,7 +28,7 @@ app.get('/v1.0/applications', (req, res) => {
   })
 })
 
-app.get('/v1.0/users/:id', (req, res) => {
+app.get('/v1.0/users', (req, res) => {
   res.status(200).send({
     value: [{
       displayName: 'userName'
