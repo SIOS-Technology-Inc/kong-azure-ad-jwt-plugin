@@ -214,7 +214,8 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
           iss: 'https://test.b2clogin.com/',
           sub: 'userId',
           aud: 'upstream_client_id',
-          azp: 'clientId'
+          azp: 'clientId',
+          name: 'name'
         }
         const jwtSecret = 'testSecretKey'
         const jwtOptions = {
@@ -280,7 +281,8 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
           iss: 'https://test.b2clogin.com/',
           sub: 'userId',
           aud: 'upstream_client_id',
-          azp: 'clientId'
+          azp: 'clientId',
+          name: 'name'
         }
         const jwtSecret = 'testSecretKey'
         const jwtOptions = {
