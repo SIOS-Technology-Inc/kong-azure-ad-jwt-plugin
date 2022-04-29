@@ -113,7 +113,8 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
                       name: 'oauth2',
                       config: {
                         enable_client_credentials: true,
-                        anonymous: anonymousId
+                        anonymous: anonymousId,
+                        provision_key: 'dummy'
                       },
                       enabled: true
                     },
@@ -260,7 +261,8 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
                       name: 'oauth2',
                       config: {
                         enable_client_credentials: true,
-                        anonymous: anonymousId
+                        anonymous: anonymousId,
+                        provision_key: 'dummy'
                       },
                       enabled: true
                     },
@@ -338,7 +340,8 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
                       name: 'oauth2',
                       config: {
                         enable_client_credentials: true,
-                        anonymous: anonymousId
+                        anonymous: anonymousId,
+                        provision_key: 'dummy'
                       },
                       enabled: true
                     },
