@@ -4,6 +4,8 @@
   "description": "",
   "scripts": {
     "lint": "eslint .",
+    "up": "docker compose down && UT_POSTGRES_VER=11.14 docker compose up --build --force-recreate -d",
+    "down": "docker compose down",
     "test": "eslint . && mocha --timeout 10000 test/**/*.spec.js",
     "ut": "eslint . && mocha --timeout 10000 test/unit/**/*.spec.js",
     "ft": "eslint . && mocha --timeout 10000 test/function/**/*.spec.js"
@@ -11,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "axios-retry": "^3.2.4",
     "chai": "^4.3.4",
     "eslint": "^7.29.0",
     "eslint-config-standard": "^16.0.3",
@@ -19,7 +22,9 @@
     "eslint-plugin-promise": "^5.1.0",
     "mocha": "^9.0.1",
     "nock": "^13.1.1",
-    "sleep": "^6.3.0"
+    "sleep": "^6.3.0",
+    "uuid": "^8.3.2",
+    "yaml": "^1.10.2"
   },
   "dependencies": {
     "@microsoft/microsoft-graph-client": "^2.2.1",

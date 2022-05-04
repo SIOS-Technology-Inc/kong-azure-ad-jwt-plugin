@@ -5,11 +5,11 @@ const axios = require('axios')
 const axiosRetry = require('axios-retry')
 const uuid = require('uuid')
 const kong = require('../utils/kong')
-const { httpbinService, httpbinRoute, oidcForAzureADB2CPlugin } = require('../kong-setting')
+const { httpbinService, httpbinRoute, oidcForAzureADPlugin, oidcForAzureADB2CPlugin } = require('../kong-setting')
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
-describe('Function test for Azure AD B2C OIDC Plugin', () => {
+describe('Function test for Azure AD And Azure AD B2C OIDC Plugin', () => {
   describe('Abnormal', () => {
     describe('when Kong Auth Plugin is NOT used', () => {
       before('setting kong', async () => {
@@ -21,7 +21,7 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
               routes: [
                 {
                   ...httpbinRoute,
-                  plugins: [oidcForAzureADB2CPlugin]
+                  plugins: [oidcForAzureADPlugin, oidcForAzureADB2CPlugin]
                 }
               ]
             }
@@ -118,6 +118,7 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
                       },
                       enabled: true
                     },
+                    oidcForAzureADPlugin,
                     oidcForAzureADB2CPlugin
                   ]
                 }
@@ -201,21 +202,19 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
               routes: [
                 {
                   ...httpbinRoute,
-                  plugins: [oidcForAzureADB2CPlugin]
+                  plugins: [oidcForAzureADPlugin, oidcForAzureADB2CPlugin]
                 }
               ]
             }
           ]
         })
       })
-      let authorizationCodeToken
+      let credentialsToken
       before('getting token', async () => {
-        const jwtPayloadForAuthorizationCode = {
-          iss: 'https://test.b2clogin.com/',
-          sub: 'userId',
+        const jwtPayloadForClientCredentials = {
+          iss: 'https://login.microsoftonline.com/',
           aud: 'upstream_client_id',
-          azp: 'clientId',
-          name: 'name'
+          azp: 'clientId'
         }
         const jwtSecret = 'testSecretKey'
         const jwtOptions = {
@@ -223,18 +222,16 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
           expiresIn: '3m'
         }
 
-        authorizationCodeToken = 'Bearer ' + jwt.sign(jwtPayloadForAuthorizationCode, jwtSecret, jwtOptions)
+        credentialsToken = 'Bearer ' + jwt.sign(jwtPayloadForClientCredentials, jwtSecret, jwtOptions)
       })
-      it('returns right headers for the upstream server when using authorization code flows', async () => {
+      it('returns right headers for the upstream server when using client credentials flows', async () => {
         const res = await axios.get('http://localhost:8000/get', {
-          headers: { Host: 'httpbin.org', Authorization: authorizationCodeToken }
+          headers: { Host: 'httpbin.org', Authorization: credentialsToken },
+          validateStatus: (status) => status < 500
         })
-
         expect(res.status).equal(200)
         expect(res.data.headers).to.have.property('X-Authenticated-Client-Id', 'clientId')
         expect(res.data.headers).to.have.property('X-Authenticated-Client-Name', 'clientName')
-        expect(res.data.headers).to.have.property('X-Authenticated-User-Id', 'userId')
-        expect(res.data.headers).to.have.property('X-Authenticated-User-Name', 'userName')
         expect(res.data.headers).not.have.property('X-Consumer-Id')
         expect(res.data.headers).not.have.property('X-Consumer-Username')
         expect(res.data.headers).not.have.property('Authorization')
@@ -267,6 +264,7 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
                       },
                       enabled: true
                     },
+                    oidcForAzureADPlugin,
                     oidcForAzureADB2CPlugin
                   ]
                 }
@@ -275,14 +273,12 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
           ]
         })
       })
-      let authorizationCodeToken
+      let credentialsToken
       before('getting token', async () => {
-        const jwtPayloadForAuthorizationCode = {
-          iss: 'https://test.b2clogin.com/',
-          sub: 'userId',
+        const jwtPayloadForClientCredentials = {
+          iss: 'https://login.microsoftonline.com/',
           aud: 'upstream_client_id',
-          azp: 'clientId',
-          name: 'name'
+          azp: 'clientId'
         }
         const jwtSecret = 'testSecretKey'
         const jwtOptions = {
@@ -290,18 +286,16 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
           expiresIn: '3m'
         }
 
-        authorizationCodeToken = 'Bearer ' + jwt.sign(jwtPayloadForAuthorizationCode, jwtSecret, jwtOptions)
+        credentialsToken = 'Bearer ' + jwt.sign(jwtPayloadForClientCredentials, jwtSecret, jwtOptions)
       })
-      it('returns right headers for the upstream server when using authorization code flows', async () => {
+      it('returns right headers for the upstream server when using client credentials flows', async () => {
         const res = await axios.get('http://localhost:8000/get', {
-          headers: { Host: 'httpbin.org', Authorization: authorizationCodeToken }
+          headers: { Host: 'httpbin.org', Authorization: credentialsToken },
+          validateStatus: (status) => status < 500
         })
-
         expect(res.status).equal(200)
         expect(res.data.headers).to.have.property('X-Authenticated-Client-Id', 'clientId')
         expect(res.data.headers).to.have.property('X-Authenticated-Client-Name', 'clientName')
-        expect(res.data.headers).to.have.property('X-Authenticated-User-Id', 'userId')
-        expect(res.data.headers).to.have.property('X-Authenticated-User-Name', 'userName')
         expect(res.data.headers).not.have.property('X-Consumer-Id')
         expect(res.data.headers).not.have.property('X-Consumer-Username')
         expect(res.data.headers).not.have.property('Authorization')
@@ -348,6 +342,13 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
                       enabled: true
                     },
                     {
+                      ...oidcForAzureADPlugin,
+                      config: {
+                        ...oidcForAzureADPlugin.config,
+                        use_kong_auth: true
+                      }
+                    },
+                    {
                       ...oidcForAzureADB2CPlugin,
                       config: {
                         ...oidcForAzureADB2CPlugin.config,
@@ -369,7 +370,7 @@ describe('Function test for Azure AD B2C OIDC Plugin', () => {
           retryDelay: axiosRetry.exponentialDelay,
           retryCondition: (error) => error.response.status >= 300
         })
-        kongCredentialsToken = (await client.post('https://localhost:8443/oauth2/token', {
+        kongCredentialsToken = (await client.post('/oauth2/token', {
           client_id: 'testClientId',
           client_secret: 'testClientSecret',
           grant_type: 'client_credentials'

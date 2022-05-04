@@ -1,5 +1,5 @@
 const chai = require('chai')
-const Plugin = require('../../plugins/oidc-for-azure-ad-b2c').Plugin
+const Plugin = require('../../plugins/oidc-for-azure-ad').Plugin
 const expect = chai.expect
 const jwt = require('jsonwebtoken')
 const nock = require('nock')
@@ -51,7 +51,7 @@ class KongMock {
   }
 }
 
-describe('Unit test for Azure AD B2C OIDC Plugin', () => {
+describe('Unit test for Azure AD OIDC Plugin', () => {
   describe('Abnormal', () => {
     before('getting token', async () => {
       process.env.SIGNED_KEY = 'testSecretKey'
@@ -188,16 +188,8 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
   })
 
   describe('Normal', () => {
-    let authorizationCodeToken
     let credentialsToken
     before('getting token', async () => {
-      const jwtPayloadForAuthorizationCode = {
-        iss: 'https://test.b2clogin.com/',
-        sub: 'userId',
-        aud: 'upstream_client_id',
-        azp: 'clientId',
-        name: 'name'
-      }
       const jwtPayloadForClientCredentials = {
         iss: 'https://login.microsoftonline.com/',
         aud: 'upstream_client_id',
@@ -209,8 +201,6 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         algorithm: 'HS256',
         expiresIn: '3m'
       }
-
-      authorizationCodeToken = 'Bearer ' + jwt.sign(jwtPayloadForAuthorizationCode, jwtSecret, jwtOptions)
 
       credentialsToken = 'Bearer ' + jwt.sign(jwtPayloadForClientCredentials, jwtSecret, jwtOptions)
     })
@@ -245,15 +235,13 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         })
     })
 
-    it('returns right headers for the upstream server when using authorization code flows', async () => {
-      const mock = new KongMock({ Authorization: authorizationCodeToken })
+    it('returns right headers for the upstream server when using client credentials flows', async () => {
+      const mock = new KongMock({ Authorization: credentialsToken })
       const plugin = new Plugin({
         upstream_client_id: 'upstream_client_id',
         header_mapping: {
           'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-          'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
-          'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
-          'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
+          'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
         },
         jwks_url: 'http://example.com'
       })
@@ -270,33 +258,15 @@ describe('Unit test for Azure AD B2C OIDC Plugin', () => {
         name: 'X-Authenticated-Client-Name',
         value: 'clientName'
       })
-      expect(mock.service.request.setHeaderCalls[2]).to.deep.equal({
-        name: 'X-Authenticated-User-Id',
-        value: 'userId'
-      })
-      expect(mock.service.request.setHeaderCalls[3]).to.deep.equal({
-        name: 'X-Authenticated-User-Name',
-        value: 'userName'
-      })
     })
     it('skips when "X-Anonymous-Consumer" from oauth2 plugin is false', async () => {
       const mock = new KongMock({ Authorization: credentialsToken })
       const plugin = new Plugin({
         upstream_client_id: 'upstream_client_id',
         use_kong_auth: true,
-        authorization_code: {
-          header_mapping: {
-            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
-            'X-Authenticated-User-Id': { from: 'token', value: 'sub' },
-            'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
-          }
-        },
-        client_credentials: {
-          header_mapping: {
-            'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-            'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
-          }
+        header_mapping: {
+          'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
+          'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
         }
       })
       mock.request.set_header('X-Anonymous-Consumer', 'false')

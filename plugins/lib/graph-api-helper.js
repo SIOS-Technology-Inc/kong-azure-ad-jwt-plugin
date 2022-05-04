@@ -11,7 +11,7 @@ class GraphApiHelper {
       params.append('client_secret', clientSecret)
       params.append('scope', 'https://graph.microsoft.com/.default')
       params.append('grant_type', 'client_credentials')
-      return (await axios.post(`${options.graphApiLoginUrl}/${azureTenant}/oauth2/v2.0/token`, params)).data.access_token
+      return (await axios.post(`${options.graphApiLoginUrl}/${azureTenant}.onmicrosoft.com/oauth2/v2.0/token`, params)).data.access_token
     }
 
     // When the access token expires, it will be automatically reacquired.
@@ -24,15 +24,17 @@ class GraphApiHelper {
   }
 
   async findClient (clientId) {
-    return (await this.graphApiClient
+    const client = await this.graphApiClient
       .api(`/applications?$filter=appId eq '${clientId}'`)
-      .get()).value[0]
+      .get()
+    return client.value ? client.value[0] : undefined
   }
 
   async findUser (userId) {
-    return (await this.graphApiClient
-      .api(`/users/${userId}`)
-      .get()).value[0]
+    const user = await this.graphApiClient
+      .api(`/users?$filter=id eq '${userId}'`)
+      .get()
+    return user.value ? user.value[0] : undefined
   }
 }
 

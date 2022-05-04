@@ -1,21 +1,21 @@
 const { OidcForAzure } = require('./lib/oidc-for-azure')
 const { JWK } = require('./lib/jwt-helper')
 
-class OidcForAzureADB2CPlugin extends OidcForAzure {
-  jwk (token) {
-    return new JWK(`https://${this.config.azure_tenant}.b2clogin.com/${this.config.azure_tenant}.onmicrosoft.com/${token.tfp}/discovery/v2.0/keys`)
+class OidcForAzureADPlugin extends OidcForAzure {
+  jwk () {
+    return new JWK(this.config.jwks_url)
   }
 }
 
 module.exports = {
-  Plugin: OidcForAzureADB2CPlugin,
+  Plugin: OidcForAzureADPlugin,
   Schema: [
     { upstream_client_id: { type: 'string', required: true } },
     { kong_client_id: { type: 'string', required: true } },
     { kong_client_secret: { type: 'string', required: true } },
     { azure_tenant: { type: 'string', required: true } },
     { use_kong_auth: { type: 'boolean', default: false } },
-    { jwks_url: { type: 'string', required: false } },
+    { jwks_url: { type: 'string', default: 'https://login.microsoftonline.com/common/discovery/keys' } },
     {
       header_mapping: {
         type: 'map',
@@ -31,12 +31,12 @@ module.exports = {
         },
         default: {
           'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-          'X-Authenticated-User-Id': { from: 'token', value: 'sub' }
+          'X-Authenticated-User-Id': { from: 'user', value: 'id' }
         }
       }
     },
     { permit_anonymous: { type: 'boolean', default: false } }
   ],
   Version: '0.1.0',
-  Priority: 998
+  Priority: 999
 }
