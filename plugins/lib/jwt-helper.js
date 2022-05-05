@@ -37,7 +37,7 @@ class JWK {
   }
 
   async validate (jwt, options) {
-    const signedKey = options.signedKey || (await getSigningKey(this.client, jwt.header().kid)).signingKey
+    const signedKey = (await getSigningKey(this.client, jwt.header().kid)).signingKey
     return verifyJWT(jwt.token, signedKey, options)
   }
 }
