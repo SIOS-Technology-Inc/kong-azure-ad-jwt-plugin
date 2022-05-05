@@ -6,8 +6,8 @@
     "lint": "eslint .",
     "up": "docker compose down && UT_POSTGRES_VER=11.14 docker compose up --build --force-recreate -d",
     "down": "docker compose down",
-    "test": "eslint . && mocha --timeout 10000 test/**/*.spec.js",
-    "ut": "eslint . && mocha --timeout 10000 test/unit/**/*.spec.js",
+    "test": "eslint . && mocha --timeout 10000 test/**/*.spec.js plugins/**/*.spec.js",
+    "ut": "eslint . && mocha --timeout 10000 plugins/**/*.spec.js",
     "ft": "eslint . && mocha --timeout 10000 test/function/**/*.spec.js"
   },
   "author": "",
