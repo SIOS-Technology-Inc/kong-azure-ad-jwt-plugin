@@ -1,5 +1,6 @@
 const chai = require('chai')
 const expect = chai.expect
+const fs = require('fs')
 const jwt = require('jsonwebtoken')
 const axios = require('axios')
 const axiosRetry = require('axios-retry')
@@ -8,6 +9,7 @@ const kong = require('../utils/kong')
 const { httpbinService, httpbinRoute, oidcForAzureADPlugin, oidcForAzureADB2CPlugin } = require('../kong-setting')
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+const jwtSecret = fs.readFileSync('./test/stub/azure-ad-jwks-api/private.pem')
 
 describe('Function test for Azure AD And Azure AD B2C OIDC Plugin', () => {
   describe('Abnormal', () => {
@@ -44,9 +46,8 @@ describe('Function test for Azure AD And Azure AD B2C OIDC Plugin', () => {
           aud: 'upstream_client_id',
           azp: 'clientId'
         }
-        const jwtSecret = 'testSecretKey'
         const jwtOptions = {
-          algorithm: 'HS256',
+          algorithm: 'RS256',
           expiresIn: '-1s'
         }
         const expiredToken = 'Bearer ' + jwt.sign(jwtPayload, jwtSecret, jwtOptions)
@@ -66,9 +67,8 @@ describe('Function test for Azure AD And Azure AD B2C OIDC Plugin', () => {
           azp: 'clientId',
           aud: 'invalid'
         }
-        const jwtSecret = 'testSecretKey'
         const jwtOptions = {
-          algorithm: 'HS256',
+          algorithm: 'RS256',
           expiresIn: '3m'
         }
         const invalidAudToken = 'Bearer ' + jwt.sign(jwtPayload, jwtSecret, jwtOptions)
@@ -143,9 +143,8 @@ describe('Function test for Azure AD And Azure AD B2C OIDC Plugin', () => {
           aud: 'upstream_client_id',
           azp: 'clientId'
         }
-        const jwtSecret = 'testSecretKey'
         const jwtOptions = {
-          algorithm: 'HS256',
+          algorithm: 'RS256',
           expiresIn: '-1s'
         }
         const expiredToken = 'Bearer ' + jwt.sign(jwtPayload, jwtSecret, jwtOptions)
@@ -165,9 +164,8 @@ describe('Function test for Azure AD And Azure AD B2C OIDC Plugin', () => {
           azp: 'clientId',
           aud: 'invalid'
         }
-        const jwtSecret = 'testSecretKey'
         const jwtOptions = {
-          algorithm: 'HS256',
+          algorithm: 'RS256',
           expiresIn: '3m'
         }
         const invalidAudToken = 'Bearer ' + jwt.sign(jwtPayload, jwtSecret, jwtOptions)
@@ -216,9 +214,8 @@ describe('Function test for Azure AD And Azure AD B2C OIDC Plugin', () => {
           aud: 'upstream_client_id',
           azp: 'clientId'
         }
-        const jwtSecret = 'testSecretKey'
         const jwtOptions = {
-          algorithm: 'HS256',
+          algorithm: 'RS256',
           expiresIn: '3m'
         }
 
@@ -280,9 +277,8 @@ describe('Function test for Azure AD And Azure AD B2C OIDC Plugin', () => {
           aud: 'upstream_client_id',
           azp: 'clientId'
         }
-        const jwtSecret = 'testSecretKey'
         const jwtOptions = {
-          algorithm: 'HS256',
+          algorithm: 'RS256',
           expiresIn: '3m'
         }
 

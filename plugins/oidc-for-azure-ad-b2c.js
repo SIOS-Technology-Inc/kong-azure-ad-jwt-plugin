@@ -3,7 +3,9 @@ const { JWK } = require('./lib/jwt-helper')
 
 class OidcForAzureADB2CPlugin extends OidcForAzure {
   jwk (token) {
-    return new JWK(`https://${this.config.azure_tenant}.b2clogin.com/${this.config.azure_tenant}.onmicrosoft.com/${token.tfp}/discovery/v2.0/keys`)
+    const baseURL = process.env.AZURE_AD_B2C_JWKS_URL || `https://${this.config.azure_tenant}.b2clogin.com`
+    const path = `/${this.config.azure_tenant}.onmicrosoft.com/${token.tfp}/discovery/v2.0/keys`
+    return new JWK(baseURL + path)
   }
 }
 
@@ -15,7 +17,6 @@ module.exports = {
     { kong_client_secret: { type: 'string', required: true } },
     { azure_tenant: { type: 'string', required: true } },
     { use_kong_auth: { type: 'boolean', default: false } },
-    { jwks_url: { type: 'string', required: false } },
     {
       header_mapping: {
         type: 'map',

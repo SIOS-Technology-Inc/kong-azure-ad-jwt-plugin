@@ -24,7 +24,6 @@ class OidcForAzure {
       await kong.service.request.clear_header('Authorization')
       await kong.service.request.clear_header('X-Consumer-Id')
       await kong.service.request.clear_header('X-Consumer-Username')
-      const SIGNED_KEY = process.env.SIGNED_KEY
       const token = JWT.fromBearer(headerToken)
       if (!token) {
         return kong.response.exit(401, {
@@ -42,8 +41,7 @@ class OidcForAzure {
         })
       }
       const { err, decoded } = await this.jwk(payload).validate(token, {
-        audience: this.config.upstream_client_id,
-        signedKey: SIGNED_KEY
+        audience: this.config.upstream_client_id
       })
       if (err) {
         if (this.config.permit_anonymous) {

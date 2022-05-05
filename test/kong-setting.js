@@ -17,7 +17,6 @@ const oidcForAzureADPlugin = {
     kong_client_id: 'client_id',
     kong_client_secret: 'client_secret',
     azure_tenant: 'test.example.com',
-    jwks_url: 'http://example.com',
     header_mapping: {
       'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
       'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
@@ -32,7 +31,6 @@ const oidcForAzureADB2CPlugin = {
     kong_client_id: 'client_id',
     kong_client_secret: 'client_secret',
     azure_tenant: 'test.example.com',
-    jwks_url: 'http://example.com',
     header_mapping: {
       'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
       'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },

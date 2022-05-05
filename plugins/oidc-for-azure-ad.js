@@ -3,7 +3,9 @@ const { JWK } = require('./lib/jwt-helper')
 
 class OidcForAzureADPlugin extends OidcForAzure {
   jwk () {
-    return new JWK(this.config.jwks_url)
+    const baseURL = process.env.AZURE_AD_JWKS_URL || 'https://login.microsoftonline.com'
+    const path = '/common/discovery/keys'
+    return new JWK(baseURL + path)
   }
 }
 
@@ -15,7 +17,6 @@ module.exports = {
     { kong_client_secret: { type: 'string', required: true } },
     { azure_tenant: { type: 'string', required: true } },
     { use_kong_auth: { type: 'boolean', default: false } },
-    { jwks_url: { type: 'string', default: 'https://login.microsoftonline.com/common/discovery/keys' } },
     {
       header_mapping: {
         type: 'map',
