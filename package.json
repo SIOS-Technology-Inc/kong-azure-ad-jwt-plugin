@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "lint": "eslint .",
-    "up": "docker compose down && UT_POSTGRES_VER=11.14 docker compose up --build --force-recreate -d",
+    "up": "docker compose down && docker compose --env-file=.test-env up --build --force-recreate -d",
     "down": "docker compose down",
     "test": "eslint . && mocha --timeout 10000 test/**/*.spec.js plugins/**/*.spec.js",
     "ut": "eslint . && mocha --timeout 10000 plugins/**/*.spec.js",

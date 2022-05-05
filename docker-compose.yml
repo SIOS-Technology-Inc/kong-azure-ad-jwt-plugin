@@ -22,10 +22,10 @@ services:
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
       # Test Env
-      AZURE_AD_JWKS_URL: 'http://azure-ad-jwks-api-stub:8080'
-      AZURE_AD_B2C_JWKS_URL: 'http://azure-ad-b2c-jwks-api-stub:8080'
-      GRAPH_API_URL: 'http://graph-api-stub:8080'
-      GRAPH_API_LOGIN_URL: 'http://graph-api-stub:8080'
+      AZURE_AD_JWKS_URL: ${AZURE_AD_JWKS_URL}
+      AZURE_AD_B2C_JWKS_URL: ${AZURE_AD_B2C_JWKS_URL}
+      GRAPH_API_URL: ${GRAPH_API_URL}
+      GRAPH_API_LOGIN_URL: ${GRAPH_API_LOGIN_URL}
       KONG_NGINX_MAIN_ENV: 'AZURE_AD_JWKS_URL; env AZURE_AD_B2C_JWKS_URL; env GRAPH_API_URL; env GRAPH_API_LOGIN_URL'
     networks:
       - kong-net
