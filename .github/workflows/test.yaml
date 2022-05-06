@@ -26,10 +26,7 @@ jobs:
         with:
           deck-version: 1.7.0
       - name: Run kong on docker
-        shell: bash
-        env:
-          UT_POSTGRES_VER: 11.14
-        run: docker-compose up -d
+        run: npm run up
       - name: Install dependencies
         run: npm ci
       - name: Run test
