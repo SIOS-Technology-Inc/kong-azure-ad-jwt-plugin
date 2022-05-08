@@ -19,7 +19,8 @@ const oidcForAzureADPlugin = {
     azure_tenant: 'test.example.com',
     header_mapping: {
       'X-Authenticated-Client-Id': { from: 'token', value: 'azp' },
-      'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' }
+      'X-Authenticated-Client-Name': { from: 'client', value: 'displayName', encode: 'url_encode' },
+      'X-Authenticated-User-Name': { from: 'user', value: 'displayName', encode: 'url_encode' }
     }
   }
 }
