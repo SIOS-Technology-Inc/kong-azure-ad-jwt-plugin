@@ -1,7 +1,12 @@
 const express = require('express')
+const fs = require('fs')
+const rsaPemToJwk = require('rsa-pem-to-jwk')
 const app = express()
 
 const port = process.env.PORT || 8080
+
+const pem = fs.readFileSync('private.pem')
+const jwk = rsaPemToJwk(pem, { use: 'sig' }, 'public')
 
 app.use((req, res, next) => {
   console.log(JSON.stringify({
@@ -12,19 +17,9 @@ app.use((req, res, next) => {
   next()
 })
 
-app.post(/.*\/token/, (req, res) => {
+app.get('/:azure_tenant/:tfp/discovery/v2.0/keys', (req, res) => {
   res.status(200).send({
-    token_type: 'Bearer',
-    expires_in: 3599,
-    access_token: 'token'
-  })
-})
-
-app.get('/v1.0/applications', (req, res) => {
-  res.status(200).send({
-    value: [{
-      displayName: 'testTenantId'
-    }]
+    keys: [jwk]
   })
 })
 

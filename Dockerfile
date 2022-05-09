@@ -20,6 +20,5 @@ ENV KONG_PLUGINSERVER_NAMES "js"
 ENV KONG_PLUGINSERVER_JS_SOCKET "/usr/local/kong/js_pluginserver.sock"
 ENV KONG_PLUGINSERVER_JS_START_CMD "/usr/bin/kong-js-pluginserver -v --plugins-directory /usr/local/kong/js-plugins"
 ENV KONG_PLUGINSERVER_JS_QUERY_CMD "/usr/bin/kong-js-pluginserver --plugins-directory /usr/local/kong/js-plugins --dump-all-plugins"
-ENV KONG_PLUGINS "bundled,oidc-for-azure-ad-b2c"
-ENV KONG_NGINX_MAIN_ENV "CLIENT_ID_FOR_MS_GRAPH_API; env CLIENT_SECRET_FOR_MS_GRAPH_API; env SIGNED_KEY; env TENANT_ID_FOR_MS_GRAPH_API; env AUTHORIZATION_CODE_JWKS_URL; env CLIENT_CREDENTIALS_JWKS_URL; env GRAPH_API_URL; env GRAPH_API_LOGIN_URL"
+ENV KONG_PLUGINS "bundled,oidc-for-azure-ad,oidc-for-azure-ad-b2c"
 USER kong
